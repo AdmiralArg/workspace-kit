@@ -1,0 +1,3 @@
+# Unix line endings everywhere, on every machine. The hooks and the skill checks depend on it.
+* text=auto eol=lf
+*.plugin binary

@@ -1,0 +1,24 @@
+# Settings for this workspace. Read by the rules, the hooks and the skills.
+# After changing this file, run setup again so the rules and hooks follow.
+# A value that contains ": " must be in quotes.
+
+client: {{client}}
+work_folder: {{work_folder}}
+
+# The agent answers in the working language, and writes documents meant for
+# other people in the deliverable language.
+working_language: {{working_language}}
+deliverable_language: {{deliverable_language}}
+
+# Characters that must never be written. Give the character in quotes, or its
+# code point, for example U+2014. Empty means nothing is banned.
+# banned_in says where: files, replies, or both.
+banned_characters: {{banned_characters}}
+banned_in: {{banned_in}}
+
+# A reminder shows at session start when the last documentation lint pass is
+# older than this many days.
+lint_every_days: {{lint_every_days}}
+
+# Extra rules for how the agent writes, one per item, added to the rules as written.
+style: {{style}}

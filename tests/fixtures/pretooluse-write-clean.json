@@ -1,0 +1,18 @@
+{
+  "session_id": "00000000-0000-0000-0000-000000000000",
+  "transcript_path": "/work/transcripts/example.jsonl",
+  "cwd": "/work/project",
+  "scratchpad_dir": "/work/scratch",
+  "prompt_id": "00000000-0000-0000-0000-000000000000",
+  "permission_mode": "auto",
+  "effort": {
+    "level": "high"
+  },
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Write",
+  "tool_input": {
+    "file_path": "/work/project/example.md",
+    "content": "A clean line with a plain hyphen - nothing banned here.\n"
+  },
+  "tool_use_id": "toolu_example"
+}

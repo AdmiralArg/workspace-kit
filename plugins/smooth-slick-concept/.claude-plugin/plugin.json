@@ -1,0 +1,15 @@
+{
+  "name": "smooth-slick-concept",
+  "version": "0.3.0",
+  "description": "A Double Diamond concept flow for exploring problems and converging on solution directions. Four phases: explore, frame, ideate, select. Designed to run before a production design flow.",
+  "author": {
+    "name": "Aslak Sødal"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "design",
+    "ux",
+    "workflow",
+    "double-diamond"
+  ]
+}

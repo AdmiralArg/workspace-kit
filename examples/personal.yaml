@@ -1,0 +1,17 @@
+# Personal defaults, used the first time a workspace is set up.
+# Save as ~/.workspace-kit.yaml. Every line is optional.
+# Once a workspace has its own workspace.yaml, that file decides.
+
+working_language: English
+deliverable_language: English
+
+# U+2014 is the em dash. U+00E9 is e with an acute accent.
+banned_characters: [U+2014, U+00E9]
+banned_in: [files, replies]
+
+lint_every_days: 28
+
+style:
+  - Lead with the result.
+  - Keep answers short unless the task needs detail.
+  - No recap paragraphs and no trailing summaries.

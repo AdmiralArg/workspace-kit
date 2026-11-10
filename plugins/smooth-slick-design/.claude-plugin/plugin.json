@@ -1,0 +1,15 @@
+{
+  "name": "smooth-slick-design",
+  "version": "0.3.0",
+  "description": "Smooth Slick Design. A complete design workflow from loose idea to review: riff, grill-me, brief, information architecture, tokens, tasks and design review.",
+  "author": {
+    "name": "Aslak Sødal"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "design",
+    "ux",
+    "workflow",
+    "double-diamond"
+  ]
+}
