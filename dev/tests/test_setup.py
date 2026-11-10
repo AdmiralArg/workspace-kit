@@ -589,6 +589,13 @@ class GitTest(Base):
         self.assertFalse((self.ws / ".git").exists())
         self.assertIn("git: no", self.read("workspace.yaml"))
 
+    def test_only_a_folder_named_after_a_sync_service_counts_as_synced(self):
+        root = Path(self.tmp.name)
+        for name in ("Jottacloud", "OneDrive - Work", "Dropbox (Personal)", "Google Drive", "iCloud Drive"):
+            self.assertTrue(setup.looks_synced(root / name / "Project"), name)
+        for name in ("C--Users-me-Jottacloud-work", "notes-about-dropbox", "Projects"):
+            self.assertFalse(setup.looks_synced(Path("X:/") / name / "Project"), name)
+
     def test_a_synced_folder_gets_a_word_of_warning(self):
         self.name_yourself()
         self.ws = Path(self.tmp.name) / "Jottacloud" / "Project"

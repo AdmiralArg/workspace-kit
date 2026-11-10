@@ -54,7 +54,7 @@ sys.path.insert(0, str(SOURCE / "hooks"))
 import kitlib  # noqa: E402
 
 KIT = "workspace-kit"
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 KIT_DIR = ".workspace-kit"
 MANIFEST = f"{KIT_DIR}/manifest.json"
 BLOCK_START = "<!-- workspace-kit:start -->"
@@ -565,7 +565,9 @@ def set_yaml_line(text: str, key: str, value: str) -> str:
 
 
 def looks_synced(workspace: Path) -> bool:
-    return any(word in part.lower() for part in workspace.parts for word in SYNCED)
+    """True when a folder on the way down is named after a sync service, such as
+    `Jottacloud` or `OneDrive - Work`. A name that merely contains the word does not count."""
+    return any(part.lower().startswith(word) for part in workspace.parts for word in SYNCED)
 
 
 def start_repository(workspace: Path, paths: list[str], personal: dict) -> list[str]:
