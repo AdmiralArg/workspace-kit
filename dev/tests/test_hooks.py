@@ -15,8 +15,8 @@ from contextlib import redirect_stderr, redirect_stdout
 from datetime import date
 from pathlib import Path
 
-KIT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(KIT / "hooks"))
+KIT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(KIT / "kit" / "hooks"))
 import banned_characters  # noqa: E402
 import kitlib  # noqa: E402
 import lint_nudge  # noqa: E402
@@ -122,6 +122,23 @@ class BannedCharactersTest(unittest.TestCase):
         old_has_it = {"file_path": "a.md", "old_string": "caf" + E_ACUTE, "new_string": "cafe"}
         self.assertEqual(self.decide(self.write("Edit", old_has_it))[0], 0)
 
+    def codex_patch(self, *body: str) -> dict:
+        """A file edit as Codex sends it: one patch in tool_input.command."""
+        patch = "\n".join(["*** Begin Patch", "*** Update File: notes.md", "@@", *body, "*** End Patch"])
+        return self.write("apply_patch", {"command": patch})
+
+    def test_a_codex_patch_is_checked_on_the_lines_it_adds_only(self):
+        code, message = self.decide(self.codex_patch(" context", "-old line", "+new " + EM_DASH + " line"))
+        self.assertEqual(code, 2)
+        self.assertIn("EM DASH (U+2014)", message)
+        self.assertIn("...new [HERE] line...", message)
+        removing = self.codex_patch(" context " + EM_DASH, "-old " + EM_DASH + " line", "+new clean line")
+        self.assertEqual(self.decide(removing)[0], 0, "removing a banned character must be allowed")
+        new_file = "\n".join(["*** Begin Patch", "*** Add File: a.md", "+caf" + E_ACUTE, "*** End Patch"])
+        self.assertEqual(self.decide(self.write("apply_patch", {"command": new_file}))[0], 2)
+        self.assertEqual(self.decide(self.write("apply_patch", {"command": 12}))[0], 0)
+        self.assertEqual(self.decide(self.write("apply_patch", {}))[0], 0)
+
     def test_other_tools_and_other_events_pass(self):
         self.assertEqual(self.decide(self.write("Bash", {"command": "echo " + EM_DASH}))[0], 0)
         self.assertEqual(self.decide({"hook_event_name": "SessionStart"})[0], 0)
@@ -171,13 +188,13 @@ class HookProcessTest(unittest.TestCase):
 
     def run_script(self, script: str, stdin, launcher: bool = False, legacy_encoding: bool = False):
         """Runs a hook the way the app does: raw UTF-8 on stdin, never escaped."""
-        cmd = [sys.executable, str(KIT / "hooks" / script)]
+        cmd = [sys.executable, str(KIT / "kit" / "hooks" / script)]
         env = dict(self.env)
         if launcher:
             shell = shutil.which("sh") or shutil.which("bash")
             if not shell:
                 self.skipTest("no sh on this machine")
-            cmd = [shell, str(KIT / "hooks" / "run.sh"), str(KIT / "hooks" / script)]
+            cmd = [shell, str(KIT / "kit" / "hooks" / "run.sh"), str(KIT / "kit" / "hooks" / script)]
         if legacy_encoding:
             # What a Windows machine does by default: the old encoding on every stream.
             env.update({"PYTHONUTF8": "0", "PYTHONIOENCODING": "cp1252"})

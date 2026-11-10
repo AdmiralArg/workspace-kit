@@ -6,11 +6,12 @@ What was actually done in this workspace, oldest first. The format is fixed so a
 
 ## Format
 
-`## [YYYY-MM-DD] <project> | <type> | <what happened>`
+`## [YYYY-MM-DD] <project> | <type> | <what happened> [<agent>]`
 
 - **project**: a folder name under `{{work_folder}}/`, or `workspace` for anything that applies across projects
 - **type**: `doc` (new or changed document), `decision`, `source` (new source material taken in), `test`, `lint`, `work` (work that changed nothing in the workspace, such as an analysis or a clarification, with the conclusion)
 - **what happened**: one line, concrete. File names where they help.
+- **agent**: the tool that did the work, in square brackets at the end, such as `[Claude Code]`, `[Codex]` or `[OpenCode]`. Several agents can work in one folder, and this says which one did what.
 
 ## Rules
 
@@ -20,4 +21,4 @@ What was actually done in this workspace, oldest first. The format is fixed so a
 
 ## Entries
 
-## [{{today}}] workspace | doc | Workspace set up with workspace-kit {{version}}
+## [{{today}}] workspace | doc | Workspace set up with workspace-kit {{version}} [setup]

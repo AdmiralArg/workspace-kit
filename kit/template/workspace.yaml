@@ -5,6 +5,14 @@
 client: {{client}}
 work_folder: {{work_folder}}
 
+# The agents this workspace is wired for: claude, codex, opencode.
+agents: {{agents}}
+
+# Keep the workspace under git, so every piece of work is a commit with its
+# log line as the message: yes, no, or ask. With yes, setup creates the
+# repository if there is none. With ask, setup asks the next time it runs.
+git: {{git}}
+
 # The agent answers in the working language, and writes documents meant for
 # other people in the deliverable language.
 working_language: {{working_language}}

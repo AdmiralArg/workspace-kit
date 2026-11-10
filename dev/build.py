@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Checks every skill and plugin in the kit, then builds one .plugin file per plugin into dist/.
 
-  python build.py            from inside the kit folder
-  python build.py <kit-dir>  from anywhere
+  python dev/build.py
 
 Nothing is built if a check fails. The checks are the ones that fail silently when
 a skill is loaded: a skill whose frontmatter cannot be read is simply never offered,
@@ -27,7 +26,7 @@ VERSION = re.compile(r"\d+\.\d+\.\d+")
 
 
 def plugins(kit: pathlib.Path) -> list[pathlib.Path]:
-    return sorted(p.parent.parent for p in (kit / "plugins").glob("*/.claude-plugin/plugin.json"))
+    return sorted(p.parent.parent for p in (kit / "kit" / "plugins").glob("*/.claude-plugin/plugin.json"))
 
 
 def check_skill(skill: pathlib.Path, base: pathlib.Path) -> list[str]:
@@ -132,15 +131,15 @@ def build_plugin(root: pathlib.Path, dist: pathlib.Path) -> pathlib.Path:
 
 
 def main() -> int:
-    kit = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else pathlib.Path(__file__).parent).resolve()
+    kit = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else pathlib.Path(__file__).parent.parent).resolve()
     found = plugins(kit)
     if not found:
-        print(f"no plugins found in {kit / 'plugins'}")
+        print(f"no plugins found in {kit / 'kit' / 'plugins'}")
         return 1
     problems = [p for root in found for p in check_plugin(root)]
-    own = sorted((kit / "skills").glob("*/SKILL.md"))
+    own = sorted((kit / "kit" / "skills").glob("*/SKILL.md"))
     for skill in own:
-        problems += check_skill(skill, kit)
+        problems += check_skill(skill, kit / "kit")
     names = [s.parent.name for s in own]
     names += [s.parent.name for root in found for s in (root / "skills").glob("*/SKILL.md")]
     for name in sorted({n for n in names if names.count(n) > 1}):
@@ -151,7 +150,7 @@ def main() -> int:
             print("  -", problem)
         return 1
     print(f"checked {len(names)} skills in {len(found)} plugins and the kit's own skills folder")
-    dist = kit / "dist"
+    dist = kit / "dev" / "dist"
     dist.mkdir(exist_ok=True)
     for root in found:
         out = build_plugin(root, dist)

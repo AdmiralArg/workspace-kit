@@ -11,6 +11,10 @@ banned_in: [files, replies]
 
 lint_every_days: 28
 
+# Who commits are made as, on a machine where git has no name and email set.
+# git_name: Your Name
+# git_email: you@example.com
+
 style:
   - Lead with the result.
   - Keep answers short unless the task needs detail.

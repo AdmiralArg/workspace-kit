@@ -22,7 +22,11 @@ DEFAULTS = {
     "banned_in": ["files"],
     "lint_every_days": 28,
     "style": [],
+    "agents": ["claude", "codex", "opencode"],
+    "git": None,
 }
+
+AGENTS = ("claude", "codex", "opencode")
 
 
 def parse_simple_yaml(text: str) -> dict:
@@ -169,6 +173,16 @@ def normalize(raw: dict) -> dict:
             raise ValueError("lint_every_days must be a whole number of days, 1 or more")
         out["lint_every_days"] = days
     out["style"] = [s.strip() for s in as_list(raw.get("style")) if s.strip()]
+    chosen = [s.strip().lower() for s in as_list(raw.get("agents"))]
+    unknown = sorted(set(chosen) - set(AGENTS))
+    if unknown:
+        raise ValueError(f"agents only takes {', '.join(AGENTS)}, not {', '.join(unknown)}")
+    out["agents"] = [a for a in AGENTS if a in chosen] or list(AGENTS)
+    choice = raw.get("git")
+    if isinstance(choice, bool):
+        out["git"] = choice
+    elif choice is not None and str(choice).strip().lower() != "ask":
+        raise ValueError("git must be yes, no or ask")
     out["extra"] = {k: v for k, v in raw.items() if k not in DEFAULTS}
     return out
 
@@ -179,8 +193,10 @@ def find_config(start: str | None = None) -> str | None:
     if explicit:
         return explicit if os.path.isfile(explicit) else None
     roots = [start] if start else []
-    if os.environ.get("CLAUDE_PROJECT_DIR"):
-        roots.append(os.environ["CLAUDE_PROJECT_DIR"])
+    # Each agent names the project folder its own way. Any of them will do.
+    for name in ("WORKSPACE_KIT_ROOT", "CLAUDE_PROJECT_DIR"):
+        if os.environ.get(name):
+            roots.append(os.environ[name])
     for root in roots:
         candidate = os.path.join(root, CONFIG_NAME)
         if os.path.isfile(candidate):

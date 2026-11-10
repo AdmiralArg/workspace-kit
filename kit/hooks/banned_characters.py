@@ -25,11 +25,21 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import kitlib  # noqa: E402
 
 ALLOW, BLOCK = 0, 2
-WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
+# Claude Code names its write tools one by one. Codex sends every file edit as a patch.
+WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit", "apply_patch"}
 
 
-def new_text(tool_input: dict) -> list[str]:
+def added_lines(patch: str) -> str:
+    """Only the lines a patch adds, so text that is being removed is never checked."""
+    lines = [line[1:] for line in patch.splitlines() if line.startswith("+") and not line.startswith("+++")]
+    return "\n".join(lines)
+
+
+def new_text(tool_name: str, tool_input: dict) -> list[str]:
     """Every piece of text a write tool is about to put into a file."""
+    if tool_name == "apply_patch":
+        patch = tool_input.get("command")
+        return [added_lines(patch)] if isinstance(patch, str) else []
     pieces = []
     for key in ("content", "new_string", "new_source"):
         if isinstance(tool_input.get(key), str):
@@ -62,7 +72,8 @@ def decide(event: dict, settings: dict) -> tuple[int, str]:
         if "files" not in settings["banned_in"] or event.get("tool_name") not in WRITE_TOOLS:
             return ALLOW, ""
         tool_input = event.get("tool_input")
-        hit = first_hit(new_text(tool_input), banned) if isinstance(tool_input, dict) else None
+        texts = new_text(event["tool_name"], tool_input) if isinstance(tool_input, dict) else []
+        hit = first_hit(texts, banned)
         if not hit:
             return ALLOW, ""
         return BLOCK, (

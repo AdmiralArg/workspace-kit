@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Fails if the kit mentions a client. Run it before every commit to the kit.
 
-  python leak_check.py --workspace PATH [--workspace PATH ...] [--term WORD ...]
+  python dev/leak_check.py --workspace PATH [--workspace PATH ...] [--term WORD ...]
 
 The words come from each named workspace's workspace.yaml: its `client`, and
 everything listed under `confidential_terms`. The kit is reusable and may be
@@ -16,8 +16,8 @@ import sys
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(ROOT / "hooks"))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "kit" / "hooks"))
 import kitlib  # noqa: E402
 
 SKIP_FOLDERS = {".git", "__pycache__"}
@@ -73,7 +73,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Fail if the kit mentions a client.")
     parser.add_argument("--workspace", action="append", default=[], help="a client workspace to take words from")
     parser.add_argument("--term", action="append", default=[], help="an extra word to look for")
-    parser.add_argument("--kit", default=str(ROOT), help="the kit folder. Default: where this script is")
+    parser.add_argument("--kit", default=str(ROOT), help="the kit repository. Default: the one this script is in")
     args = parser.parse_args(argv)
 
     terms = list(args.term)
