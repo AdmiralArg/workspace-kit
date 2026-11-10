@@ -28,7 +28,7 @@ Settings are in `workspace.yaml`. Active work lives in `{{work_folder}}/`, one s
 
 Every session that did work adds one line to `{{work_folder}}/log.md` before it ends, in the format that file describes, ending with the name of the agent in square brackets. Pure reading and questions are not logged.
 
-If the workspace is a git repository, commit the work with the log line as the message. Commit only the files this session changed, by name, never everything at once: other agents may be working in the same folder. Add to the log, never rewrite it.
+If the workspace is a git repository, then commit. The commit message is the log line itself, copied word for word from `## [` to the agent name, so the history and the log say the same thing. Commit only the files this session changed, by name, never everything at once: other agents may be working in the same folder. Add to the log, never rewrite it.
 
 ### Lint
 
