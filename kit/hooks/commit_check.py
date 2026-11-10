@@ -75,8 +75,8 @@ def message(found: list[tuple[str, int, str]]) -> str:
     if len(found) > MAX_SHOWN:
         lines.append(f"  and {len(found) - MAX_SHOWN} more")
     if any("valid UTF-8" in reason for _, _, reason in found):
-        lines.append("Broken bytes usually come from writing a file through a shell command. "
-                     "Write the line again with a file editing tool.")
+        lines.append("That usually means the file was saved in another encoding. Save it as UTF-8, "
+                     "or write the line again with a file editing tool.")
     if any("valid UTF-8" not in reason for _, _, reason in found):
         lines.append("The characters named above are banned in workspace.yaml. Rewrite the lines without them.")
     lines.append("Then add the files and commit again.")

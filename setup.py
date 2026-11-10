@@ -54,7 +54,7 @@ sys.path.insert(0, str(SOURCE / "hooks"))
 import kitlib  # noqa: E402
 
 KIT = "workspace-kit"
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 KIT_DIR = ".workspace-kit"
 MANIFEST = f"{KIT_DIR}/manifest.json"
 BLOCK_START = "<!-- workspace-kit:start -->"

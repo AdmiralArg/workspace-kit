@@ -9,7 +9,7 @@ Settings are in `workspace.yaml`. Active work lives in `{{work_folder}}/`, one s
 {{banned_rule}}{{style_rules}}
 ### Writing files
 
-Write and change files with your file editing tool, not through shell commands. Text sent through a shell can lose characters outside plain English, and it skips the checks this workspace runs on new text.
+Write and change files with your file editing tool, not through shell commands. Text written through a shell skips the checks this workspace runs on new text, and often gets different line endings.
 
 ### Before building
 
