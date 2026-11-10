@@ -7,6 +7,10 @@ Settings are in `workspace.yaml`. Active work lives in `{{work_folder}}/`, one s
 - Answer in {{working_language}}. If the user writes in another language, answer in that language.
 - Documents meant for other people are written in {{deliverable_language}}.
 {{banned_rule}}{{style_rules}}
+### Writing files
+
+Write and change files with your file editing tool, not through shell commands. Text sent through a shell can lose characters outside plain English, and it skips the checks this workspace runs on new text.
+
 ### Before building
 
 **Unclear starts.** When a session opens with something not yet defined (a loose idea, a problem without a frame, no named deliverable, or a new project with no folder under `{{work_folder}}/`), do not start building. Say in one line what is unclear and offer the matching step: `concept-flow` when the problem itself is unclear, `riff` when there is a loose idea to shape, `grill-me` when a direction is chosen but untested. Offer once, run it on yes, drop it if declined. Skip it for clearly scoped tasks and follow-ups.
@@ -28,7 +32,7 @@ Settings are in `workspace.yaml`. Active work lives in `{{work_folder}}/`, one s
 
 Every session that did work adds one line to `{{work_folder}}/log.md` before it ends, in the format that file describes, ending with the name of the agent in square brackets. Pure reading and questions are not logged.
 
-If the workspace is a git repository, then commit. The commit message is the log line itself, copied word for word from `## [` to the agent name, so the history and the log say the same thing. Commit only the files this session changed, by name, never everything at once: other agents may be working in the same folder. Add to the log, never rewrite it.
+If the workspace is a git repository, then commit. The commit message is the log line itself, copied word for word from `## [` to the agent name, so the history and the log say the same thing. Commit only the files this session changed, by name, never everything at once: other agents may be working in the same folder. Add to the log, never rewrite it. If you are not allowed to commit, say so and leave the changes for the owner to commit.
 
 ### Lint
 

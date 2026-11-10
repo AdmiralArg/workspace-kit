@@ -5,10 +5,10 @@ Decisions that are hard to reverse, would surprise a colleague who joins later, 
 Format for each decision:
 
     ### [Short title]
-    [YYYY-MM-DD] · Status: accepted
+    [YYYY-MM-DD], status: accepted
 
     [What was decided, what it was chosen against, and why.]
 
-Status is `accepted`, `proposed`, or `superseded by [title]`. An agent that meets work in conflict with an accepted decision stops and says so.
+The status is `accepted`, `proposed`, or `superseded by [title]`. An agent that meets work in conflict with an accepted decision stops and says so.
 
 ---

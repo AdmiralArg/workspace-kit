@@ -46,8 +46,12 @@ class Base(unittest.TestCase):
         os.environ["WORKSPACE_KIT_PERSONAL"] = str(self.personal)
         for name in ("WORKSPACE_KIT_CONFIG", "WORKSPACE_KIT_ROOT"):
             os.environ.pop(name, None)
+        # Whether a person is at the keyboard must not depend on how the tests are started.
+        self._interactive = setup.interactive
+        setup.interactive = lambda: False
 
     def tearDown(self):
+        setup.interactive = self._interactive
         os.environ.clear()
         os.environ.update(self._env)
         self.tmp.cleanup()
@@ -652,6 +656,112 @@ class GitTest(Base):
             self.assertEqual(len(asked), 2, "a dry run never asks")
         finally:
             setup.interactive, builtins.input = real_interactive, real_input
+
+    def test_a_question_nobody_can_answer_is_left_open(self):
+        """A terminal that closes, or an agent's shell that only looks like one."""
+        real_input = builtins.input
+
+        def nobody(prompt=""):
+            raise EOFError
+
+        setup.interactive = lambda: True
+        builtins.input = nobody
+        try:
+            code, text = self.run_setup("install")
+        finally:
+            builtins.input = real_input
+        self.assertEqual(code, 0, text)
+        self.assertFalse((self.ws / ".git").exists())
+        self.assertIn("git: ask", self.read("workspace.yaml"))
+        self.assertIn("No git repository was created, because nobody has said whether to", text)
+
+    def commit(self, rel: str, data: bytes, *extra: str) -> subprocess.CompletedProcess:
+        """Writes a file the way a shell or a person would, past every agent hook, and commits it."""
+        target = self.ws / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        subprocess.run(["git", "-C", str(self.ws), "add", "--", rel], capture_output=True)
+        return subprocess.run(["git", "-C", str(self.ws), "commit", "-m", "work", *extra],
+                              capture_output=True, text=True, encoding="utf-8", errors="replace")
+
+    def test_the_commit_check_stops_what_no_agent_hook_saw(self):
+        self.name_yourself()
+        code, text = self.run_setup("install", "--git", "--ban", "U+2014")
+        self.assertEqual(code, 0, text)
+        self.assertIn(".git/hooks/pre-commit", text)
+        hook = self.ws / ".git" / "hooks" / "pre-commit"
+        self.assertIn("Written by workspace-kit", hook.read_text(encoding="utf-8"))
+        self.assertIn(".gitattributes", self.git("ls-files").splitlines())
+
+        done = self.commit("projects/a.md", ("fine\nbad " + EM_DASH + " line\n").encode("utf-8"))
+        self.assertNotEqual(done.returncode, 0, "a banned character added to a file stops the commit")
+        self.assertIn("projects/a.md:2  EM DASH (U+2014)", done.stderr)
+        self.assertEqual(self.git("rev-list", "--count", "HEAD"), "1")
+
+        done = self.commit("projects/a.md", b"fine\nnow clean\n")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(self.git("rev-list", "--count", "HEAD"), "2")
+
+        done = self.commit("projects/b.md", b"caf" + bytes([0xB7]) + b" broken by a shell\n")
+        self.assertNotEqual(done.returncode, 0, "bytes that are not valid text stop the commit")
+        self.assertIn("projects/b.md:1  bytes that are not valid UTF-8 text", done.stderr)
+        self.assertIn("file editing tool", done.stderr)
+
+        done = self.commit("projects/b.md", b"caf" + bytes([0xB7]) + b" kept on purpose\n", "--no-verify")
+        self.assertEqual(done.returncode, 0, "the owner can still overrule the check")
+
+        done = self.commit("projects/a.md", b"fine\n")
+        self.assertEqual(done.returncode, 0, "taking a line out is never stopped: " + done.stderr)
+        done = self.commit("photo.bin", bytes(range(256)) * 4)
+        self.assertEqual(done.returncode, 0, "files that are not text are left alone: " + done.stderr)
+        named = self.read("workspace.yaml").replace("[U+2014]", '["' + EM_DASH + '"]')
+        done = self.commit("workspace.yaml", named.encode("utf-8"))
+        self.assertEqual(done.returncode, 0, "the settings file may name the character it bans: " + done.stderr)
+
+        if setup.find_shell():
+            code, text = self.run_setup("check")
+            self.assertEqual(code, 0, text)
+            self.assertIn("ok    commit check", text)
+            self.assertIn("ok    commit check runs", text)
+            hook.unlink()
+            code, text = self.run_setup("check")
+            self.assertEqual(code, 1)
+            self.assertIn("FAIL  commit check: it is missing", text)
+            self.run_setup("install")
+            self.assertTrue(hook.exists(), "install puts it back")
+
+    def test_the_commit_check_works_without_any_banned_characters(self):
+        self.name_yourself()
+        self.run_setup("install", "--git")
+        done = self.commit("projects/a.md", ("an em dash " + EM_DASH + " is fine here\n").encode("utf-8"))
+        self.assertEqual(done.returncode, 0, done.stderr)
+        done = self.commit("projects/c.md", b"broken " + bytes([0xE9]) + b" byte\n")
+        self.assertNotEqual(done.returncode, 0)
+
+    def test_a_pre_commit_hook_that_is_yours_is_never_replaced(self):
+        self.name_yourself()
+        self.git("init", "-b", "main")
+        hook = self.ws / ".git" / "hooks" / "pre-commit"
+        hook.parent.mkdir(parents=True, exist_ok=True)
+        hook.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        code, text = self.run_setup("install", "--git")
+        self.assertEqual(code, 0, text)
+        self.assertEqual(hook.read_text(encoding="utf-8"), "#!/bin/sh\nexit 0\n")
+        self.assertIn("already has a pre-commit hook that the kit did not write", text)
+
+    def test_remove_and_saying_no_to_git_take_the_commit_check_out(self):
+        self.name_yourself()
+        self.run_setup("install", "--git")
+        hook = self.ws / ".git" / "hooks" / "pre-commit"
+        self.assertTrue(hook.exists())
+        self.run_setup("install", "--no-git")
+        self.assertFalse(hook.exists())
+        self.assertTrue((self.ws / ".git").is_dir(), "the repository itself is never removed")
+        self.run_setup("install", "--git")
+        self.assertTrue(hook.exists())
+        self.run_setup("remove")
+        self.assertFalse(hook.exists())
+        self.assertTrue((self.ws / ".git").is_dir())
 
 
 class KitItselfTest(unittest.TestCase):

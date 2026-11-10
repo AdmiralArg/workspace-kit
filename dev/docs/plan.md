@@ -14,6 +14,8 @@ The principle from the research: writing things down is cheap, what the agent re
 - **Launchers.** `run.sh` and `run.cmd` find a Python that actually runs and force UTF-8. Neither needs an executable bit.
 - **Skills in two folders.** `.claude/skills` for Claude Code and `.agents/skills` for Codex and OpenCode. OpenCode reads both and keeps one copy.
 - **Git, on the owner's word.** Setup asks whether the folder should be under git. A person at the keyboard is asked directly, an agent has to pass the owner's answer, and with no answer nothing is created. On a yes, a repository is created when there is none, with safe settings for a folder opened from several systems. Every log line names its agent, and the rules ask for one commit per piece of work.
+- **A check at every commit.** A pre-commit hook stops a commit that adds a banned character or bytes that are not valid text. It is the one check every path goes through: an agent's file tool, a shell command, or a person. It came from a live run where Codex on Windows wrote through the shell, past the file hook, and broke a character on the way.
+- **Plain characters in what agents copy.** Templates that an agent reproduces, such as the decision format, use plain English characters only.
 - **Lint reminder.** At session start, from the log.
 - **Checks on the kit itself.** Tests for the installer, the hooks and the settings reader. A build that refuses skills which would fail silently. A leak check for client names.
 
@@ -29,6 +31,15 @@ The principle from the research: writing things down is cheap, what the agent re
 | Codex shows the model the rules and all the skills | `codex debug prompt-input`, which prints what the model is given |
 | Codex's patch format is checked on added lines only | Tests, against the format in Codex's documentation |
 | Both launchers pass input, output and exit code through | Tests, in `sh` and in the Windows shell, with a space in the folder name |
+| Three harnesses doing real work in one folder | OpenCode started a project, Codex recorded a decision, Claude Code wrote a note. Each followed the rules and named itself in the log |
+| The commit check stops a real commit | Tests with real git commits, and live in the test folder |
+
+## Found by running it for real
+
+- **Windows reads hook input in its old encoding.** A banned character slipped through until the launchers forced UTF-8 and the hooks decoded their input themselves.
+- **Codex's sandbox keeps `.git` read-only.** It cannot commit on its own. It says so and leaves the changes, which the rules now ask for.
+- **Codex on Windows may write files through PowerShell.** That skips the file hook and can break characters outside plain English. The rules now ask for the file tool, and the commit check catches what still gets through.
+- **An agent may write its own commit message.** The rule now says the message is the log line, word for word.
 
 ## Not verified
 

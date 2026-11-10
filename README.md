@@ -12,7 +12,7 @@ A working method for doing documentation, design and product work with an AI age
 | Log | One line per piece of work, naming the agent that did it, in a format a script can read |
 | Git | A repository, so each piece of work is a commit with its log line as the message |
 | Inbox | A drop zone for unsorted material, with a fixed way of taking it in |
-| Hooks | A lint reminder at session start, and a hard stop on characters you have banned |
+| Hooks | A lint reminder at session start, a hard stop on characters you have banned, and a check at every commit |
 | Skills | A documentation lint, a Double Diamond concept flow (5 skills) and a design flow from loose idea to review (8 skills) |
 
 ## Which agent gets what
@@ -24,7 +24,10 @@ A working method for doing documentation, design and product work with an AI age
 | Lint reminder at session start | Yes | Yes | Yes |
 | Banned characters stopped in files | Yes | Yes | Yes |
 | Banned characters stopped in replies | Yes | Yes | No, OpenCode cannot send a reply back |
+| Makes its own commits | Yes | Its sandbox protects git, so it asks you to approve the commit or leaves it to you | Yes |
 | Needs a step from you | No | Approve the hooks once, with `/hooks` | No |
+
+Whatever an agent's own hook misses is caught when the work is committed. That covers text an agent writes through a shell command instead of its file tool, which Codex on Windows sometimes does.
 
 Other agents that read `AGENTS.md`, such as Cursor and Copilot, get the rules and the files. They do not get the hooks, and whether they find the skills depends on the agent.
 
@@ -108,6 +111,7 @@ Setup asks whether you want the folder under git. If you say yes and there is no
 
 - When you run setup yourself, it asks. When an agent runs it, the agent asks you and passes your answer as `--git` or `--no-git`. With no answer, nothing is created and setup says so.
 - The answer is kept as `git: yes` or `git: no` in `workspace.yaml`. Change your mind by running setup again with the other option.
+- **A check at every commit.** With git on, a commit is stopped if a line it adds holds a banned character, or bytes that are not valid text. It looks only at added lines, so old text never stops a commit, and `git commit --no-verify` overrules it. If the repository already has a pre-commit hook of its own, the kit leaves that alone and says so.
 - Files that were in the folder before setup are not committed for you.
 - A folder that is already under git is left as it is. Setup commits nothing there.
 - In a folder synced between devices, git works, but use it from one device at a time and let the sync finish before you switch.

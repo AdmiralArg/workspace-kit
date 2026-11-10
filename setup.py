@@ -54,7 +54,7 @@ sys.path.insert(0, str(SOURCE / "hooks"))
 import kitlib  # noqa: E402
 
 KIT = "workspace-kit"
-VERSION = "0.2.1"
+VERSION = "0.3.0"
 KIT_DIR = ".workspace-kit"
 MANIFEST = f"{KIT_DIR}/manifest.json"
 BLOCK_START = "<!-- workspace-kit:start -->"
@@ -459,7 +459,64 @@ GITIGNORE = (
     "# Files that are not work: system files, editor leftovers, office lock files.\n"
     ".DS_Store\nThumbs.db\ndesktop.ini\n__pycache__/\n*.pyc\n*.swp\n~$*\n.~lock.*#\n"
 )
+GITATTRIBUTES = (
+    "# The same line endings in the history whichever system, agent or shell wrote the file.\n"
+    "* text=auto eol=lf\n"
+)
 SYNCED = ("jottacloud", "dropbox", "onedrive", "icloud", "google drive", "googledrive", "cloudstorage")
+COMMIT_HOOK_MARK = "Written by workspace-kit"
+COMMIT_HOOK = (
+    "#!/bin/sh\n"
+    f"# {COMMIT_HOOK_MARK}. Stops a commit that adds a banned character or broken text.\n"
+    "# Safe to delete: setup writes it again on its next run.\n"
+    f"exec sh {KIT_DIR}/hooks/run.sh {KIT_DIR}/hooks/commit_check.py\n"
+)
+
+
+def commit_hook_path(workspace: Path) -> Path | None:
+    """Where git looks for this repository's pre-commit hook."""
+    found = git(workspace, "rev-parse", "--git-path", "hooks")
+    if found.returncode != 0 or not found.stdout.strip():
+        return None
+    folder = Path(found.stdout.strip())
+    return (folder if folder.is_absolute() else workspace / folder) / "pre-commit"
+
+
+def commit_hook_state(workspace: Path) -> str:
+    """`ours`, `theirs` for a hook the kit did not write, `missing`, or `none` without a repository."""
+    path = commit_hook_path(workspace)
+    if path is None:
+        return "none"
+    if not path.exists():
+        return "missing"
+    return "ours" if COMMIT_HOOK_MARK in path.read_text(encoding="utf-8", errors="replace") else "theirs"
+
+
+def sync_commit_hook(workspace: Path, wanted: bool, dry_run: bool) -> tuple[str, str]:
+    """Puts the commit check in place, or takes it out. Returns what happened and a note."""
+    path = commit_hook_path(workspace)
+    if path is None:
+        return "", ""
+    state = commit_hook_state(workspace)
+    if state == "theirs":
+        note = ("This repository already has a pre-commit hook that the kit did not write, "
+                "so the kit's commit check is not installed.") if wanted else ""
+        return "", note
+    if not wanted:
+        if state == "ours" and not dry_run:
+            path.unlink()
+        return ("removed" if state == "ours" else ""), ""
+    current = path.read_bytes() if state == "ours" else None
+    if current == COMMIT_HOOK.encode("utf-8"):
+        if not dry_run and os.name != "nt" and not os.access(path, os.X_OK):
+            path.chmod(0o755)  # a synced folder does not carry this from one system to the next
+            return "updated", ""
+        return "", ""
+    if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(COMMIT_HOOK.encode("utf-8"))
+        path.chmod(0o755)
+    return ("updated" if state == "ours" else "created"), ""
 
 
 def git(workspace: Path, *args: str) -> subprocess.CompletedProcess:
@@ -487,10 +544,15 @@ def interactive() -> bool:
         return False
 
 
-def ask_about_git(workspace: Path) -> bool:
+def ask_about_git(workspace: Path) -> bool | None:
+    """The owner's answer, or None when the question could not be put to anyone."""
     print(f"\n{workspace} is not under git.")
     print("With git, every piece of work becomes a commit, so you can see what was done, when, and by which agent.")
-    answer = input("Create a git repository here? [Y/n] ").strip().lower()
+    try:
+        answer = input("Create a git repository here? [Y/n] ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return None
     return answer in ("", "y", "yes", "j", "ja")
 
 
@@ -517,9 +579,10 @@ def start_repository(workspace: Path, paths: list[str], personal: dict) -> list[
     # from reporting changes that are only a difference between those systems.
     git(workspace, "config", "core.fileMode", "false")
     git(workspace, "config", "core.autocrlf", "false")
-    if not (workspace / ".gitignore").exists():
-        (workspace / ".gitignore").write_text(GITIGNORE, encoding="utf-8", newline="\n")
-        paths = [*paths, ".gitignore"]
+    for name, content in ((".gitignore", GITIGNORE), (".gitattributes", GITATTRIBUTES)):
+        if not (workspace / name).exists():
+            (workspace / name).write_text(content, encoding="utf-8", newline="\n")
+            paths = [*paths, name]
 
     identity: list[str] = []
     named = all(git(workspace, "config", key).stdout.strip() for key in ("user.name", "user.email"))
@@ -740,6 +803,16 @@ def install(workspace: Path, args) -> int:
         elif report.changed():
             notes.append("This folder is already under git. Setup committed nothing: commit the new files when you are ready.")
 
+    # 7. The check that runs at every commit, in a repository rooted in this folder.
+    #    It catches what no agent's own hook sees: text written through a shell.
+    created_now = repository == "no" and bool(settings["git"]) and not args.dry_run
+    if repository == "here" or created_now:
+        happened, note = sync_commit_hook(workspace, bool(settings["git"]), args.dry_run)
+        if happened:
+            report.add(happened, ".git/hooks/pre-commit", "the check that runs at every commit")
+        if note:
+            notes.append(note)
+
     report.show(args.verbose)
     for note in notes:
         print(f"\nNote: {note}")
@@ -809,6 +882,11 @@ def remove(workspace: Path, args) -> int:
         else:
             out.write(rel, dump_json(cleaned))
             report.add("updated", rel, "the kit's hooks are taken out")
+
+    if git_state(workspace) == "here":
+        happened, _ = sync_commit_hook(workspace, False, args.dry_run)
+        if happened:
+            report.add("removed", ".git/hooks/pre-commit")
 
     out.delete(MANIFEST)
     report.show(verbose=True)
@@ -964,6 +1042,19 @@ def check(workspace: Path, args) -> int:
                 notes.append("Git is not installed, so the work here cannot be committed.")
             else:
                 add(state != "no", "git repository", "" if state != "no" else "there is none. Run install")
+                if state == "here":
+                    hook = commit_hook_state(workspace)
+                    path = commit_hook_path(workspace)
+                    if hook == "theirs":
+                        notes.append("The repository has a pre-commit hook the kit did not write, so the kit's "
+                                     "commit check is not installed.")
+                    elif hook == "ours" and os.name != "nt" and not os.access(path, os.X_OK):
+                        add(False, "commit check", "it is in place but this system will not run it. Run install")
+                    else:
+                        add(hook == "ours", "commit check", "" if hook == "ours" else "it is missing. Run install")
+                    if hook == "ours":
+                        code, text = run_hook(workspace, "commit_check.py", None)
+                        add(code == 0, "commit check runs", "" if code == 0 else f"exit {code}. {text}")
                 if state != "no":
                     waiting = [l for l in git(workspace, "status", "--porcelain").stdout.splitlines() if l.strip()]
                     if waiting:
