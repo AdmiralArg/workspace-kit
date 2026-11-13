@@ -127,9 +127,66 @@ Setup asks whether you want the folder under git. If you say yes and there is no
 - **New material.** Drop it in `Inbox/`. The next session reads it, files it where it belongs and logs it.
 - **Keeping it honest.** Say "lint the workspace". The lint finds contradictions, undefined terms, stale claims, a stale index, documents with no description, documents too large to read whole and broken file references, and proposes fixes. A reminder shows when the last pass is too old.
 
-## Update, check, remove
+## Update
 
-- **Update.** Get the newer kit and run `install` again. Files you have not edited follow the kit. Files you edited are kept as you left them. The index is rebuilt on every run, except an `index.md` you wrote yourself, which is left alone. `check` says when the installed kit is older than the one you run it from.
+An update is the same `install` command, run again with a newer kit. It reads `workspace.yaml` and the record of what it installed last time, and changes only what the newer kit changes.
+
+**Let your agent do it.** Say this to it, in the project:
+
+> Update workspace-kit in this project from https://github.com/AdmiralArg/workspace-kit. Follow the "Updating" part of INSTALL.md in that repository.
+
+**Or do it yourself.** Get the newer kit. If you still have the folder you cloned, pull it, otherwise clone it again:
+
+```bash
+git -C /path/to/workspace-kit pull
+```
+
+Then, from inside the kit folder, see which version the project has, see what the update would change, do it, and check it:
+
+```bash
+python3 setup.py check --workspace /path/to/your/project
+```
+
+```bash
+python3 setup.py install --workspace /path/to/your/project --dry-run
+```
+
+```bash
+python3 setup.py install --workspace /path/to/your/project
+```
+
+```bash
+python3 setup.py check --workspace /path/to/your/project
+```
+
+The first line of `check` fails with `installed 0.3.2, this kit is 0.4.0. Run install to update` when the project is behind. Leave out the setup options: once `workspace.yaml` exists they are ignored, and you change settings by editing the file. Then start a new session in the project, so the new rules, skills and hooks load.
+
+What an update does to each kind of file:
+
+| File | On update |
+|---|---|
+| Hooks, templates, skills and the OpenCode adapter, untouched since install | Replaced with the newer kit's version |
+| The same files, edited by you | Left alone, and listed as "left alone, you edited it". The newer version is not installed |
+| Files the newer kit no longer has | Removed, unless you edited them |
+| `AGENTS.md` and `CLAUDE.md` | Only the section between the markers is rewritten. Your own text above and below stays |
+| `.claude/settings.json`, `.codex/hooks.json` | Only the kit's hooks are changed. Your settings and other hooks stay |
+| `workspace.yaml`, the log, the glossary, the inbox, your documents | Never touched |
+| `<work folder>/index.md` | Rebuilt from the documents. An `index.md` you wrote yourself is left alone |
+
+To take the kit's version of a file you edited, delete the file and run `install` again.
+
+If the project is under git, the update commits nothing. Add a line to the log, such as `## [2026-11-13] workspace | doc | workspace-kit updated from 0.3.2 to 0.4.0 [Claude Code]`, and commit the changes with that line as the message. Your agent does this for you when it runs the update.
+
+To update several projects at once, run the same command for each:
+
+```bash
+for p in ~/work/alpha ~/work/beta; do python3 setup.py install --workspace "$p"; done
+```
+
+**From 0.3 to 0.4.** The update adds the index builder, a template for new documents, the "Finding things" rules and the index itself. Documents written before have no header yet, so the index takes each one's description from its first line of text. Say "lint the workspace" to have the agent propose the missing headers.
+
+## Check and remove
+
 - **Check.** `python3 setup.py check --workspace PATH`. It feeds each hook a sample that must be blocked and one that must pass, in every form an agent uses.
 - **Remove.** `python3 setup.py remove --workspace PATH`. It takes out what it put in, the index included. Your settings, log, glossary, inbox and git history stay.
 

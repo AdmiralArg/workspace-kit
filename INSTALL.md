@@ -70,10 +70,48 @@ You are setting up workspace-kit in the user's project. Follow the steps in orde
 - The installer makes one commit when it creates a git repository. Do not commit anything else unless the user asks.
 - Do not install into the kit folder itself.
 
+## Updating
+
+Use this when the user asks to update the kit in a project that already has it: PROJECT has a `.workspace-kit/manifest.json`. Do steps 1 to 3 above first. If KIT is a clone that already exists, update it instead of cloning again:
+
+```bash
+git -C KIT pull
+```
+
+1. **See where it stands.** The first line says which version PROJECT has and which version KIT is.
+
+   ```bash
+   PY KIT/setup.py check --workspace PROJECT
+   ```
+
+   If both versions are the same, tell the user it is already up to date, and stop.
+
+2. **Show the plan.** This writes nothing. Show the user the output, and point out every line under "Left alone": those are files they edited, which keep their version and do not get the kit's newer one.
+
+   ```bash
+   PY KIT/setup.py install --workspace PROJECT --dry-run
+   ```
+
+3. **Update.** No options. Settings come from `workspace.yaml`, and the git answer is already in it.
+
+   ```bash
+   PY KIT/setup.py install --workspace PROJECT
+   ```
+
+4. **Check.** As in step 7 above. The version line must now say the same version twice.
+
+5. **Report.** Tell the user:
+   - which version PROJECT went from and to
+   - what was created, updated and removed, and what was left alone and why
+   - that they must start a new session in PROJECT before the new rules, skills and hooks take effect
+   - if PROJECT is under git: that the update committed nothing. Offer to add the line `## [<today>] workspace | doc | workspace-kit updated from <old> to <new> [<your agent name>]` to the log and commit the update with that line as the message
+
+If the user wants the kit's version of a file they edited, delete that file only after they say so, then run step 3 again.
+
 ## Later
 
 - **After editing `workspace.yaml`:** run step 6 without options, then step 7.
-- **Updating:** get the newer kit, then run step 6 without options, then step 7.
+- **Updating:** follow "Updating" above.
 - **Removing:**
 
   ```bash
