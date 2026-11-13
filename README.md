@@ -120,7 +120,7 @@ Setup asks whether you want the folder under git. If you say yes and there is no
 
 ## Using it
 
-- **Starting something unclear.** The agent offers `concept-flow` when the problem is unclear, `riff` when there is a loose idea, and `grill-me` when a direction is chosen but untested. It offers once and takes no for an answer.
+- **Starting something unclear.** The agent offers `concept-flow` when the problem is unclear or you are thinking out loud about it, `riff` when there is a loose idea for something to build, and `grill-me` when a direction is chosen but untested. It offers once and takes no for an answer.
 - **A new project.** A folder under the work folder with `README.md`, `context.md` and `decisions.md`, started from `.workspace-kit/templates/project/`.
 - **Finding something.** The agent reads `projects/index.md`, narrows to the project and the document, and searches the files for the word and its other names from the glossary. It names the file an answer rests on. There is no search engine and nothing to keep running: the index is a text file, rebuilt with `sh .workspace-kit/hooks/run.sh .workspace-kit/hooks/build_index.py`.
 - **A new document.** Three lines at the top say what question it answers, when it was last true, and whether it is current, a snapshot or superseded. The index is built from them.

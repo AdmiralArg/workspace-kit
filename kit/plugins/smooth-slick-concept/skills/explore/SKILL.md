@@ -1,7 +1,7 @@
 ---
 name: explore
 description: >
-  Maps a problem space broadly before jumping to solutions. Use when the user says "explore this problem", «utforsk dette problemet», "help me understand the landscape", «la oss kartlegge dette», or wants to lay out what they know and do not know before choosing a direction. Part of the Smooth Slick Concept flow (Diamond 1, diverge).
+  Maps a messy or half-formed problem before anyone picks what to solve. Use when the user is circling a problem, thinking out loud, or listing what they know and do not, and has not decided what to solve yet. Also on "explore this problem", «utforsk dette problemet», "help me understand the landscape", «la oss kartlegge dette». First step of concept-flow.
 ---
 
 # Explore

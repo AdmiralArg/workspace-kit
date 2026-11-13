@@ -1,7 +1,7 @@
 ---
 name: ideate
 description: >
-  Generates several solution directions for a framed problem. Use when the user says "ideate", «myldre ideer», "what could we do", «hva kan vi gjøre», "come up with options", or wants breadth before committing to one approach. Part of the Smooth Slick Concept flow (Diamond 2, diverge).
+  Generates several solution directions for a problem that is framed. Use when the user knows the problem and wants options before committing to one. Also on "ideate", «myldre ideer», "what could we do", «hva kan vi gjøre», "come up with options". Third step of concept-flow.
 ---
 
 # Ideate

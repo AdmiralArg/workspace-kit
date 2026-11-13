@@ -13,7 +13,7 @@ Write and change files with your file editing tool, not through shell commands. 
 
 ### Before building
 
-**Unclear starts.** When a session opens with something not yet defined (a loose idea, a problem without a frame, no named deliverable, or a new project with no folder under `{{work_folder}}/`), do not start building. Say in one line what is unclear and offer the matching step: `concept-flow` when the problem itself is unclear, `riff` when there is a loose idea to shape, `grill-me` when a direction is chosen but untested. Offer once, run it on yes, drop it if declined. Skip it for clearly scoped tasks and follow-ups.
+**Unclear starts.** When a session opens with something not yet defined (a loose idea, a problem without a frame, no named deliverable, or a new project with no folder under `{{work_folder}}/`), do not start building. Say in one line what is unclear and offer the matching step: `concept-flow` when the problem itself is unclear or the user is thinking out loud about it, `riff` when there is a loose idea for something to build, `grill-me` when a direction is chosen but untested. Offer once, run it on yes, drop it if declined. Skip it for clearly scoped tasks and follow-ups.
 
 ### Finding things
 

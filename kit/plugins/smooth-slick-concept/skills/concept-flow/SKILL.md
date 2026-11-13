@@ -1,7 +1,7 @@
 ---
 name: concept-flow
 description: >
-  Runs the full Double Diamond concept flow in sequence: explore, frame, ideate, select. Use when a session starts undefined (an unclear problem, no named deliverable, a new project without a frame) and offer the flow before anything is built. Also when the user says "run the concept flow", «kjør konseptflyten», "help me think this through end to end", «start konseptløpet», or wants to go from a vague situation to a clear recommendation.
+  Takes a vague problem to a concept recommendation: explore, frame, ideate, select. Use whenever the user is noodling on a problem, thinking out loud, unsure what the real problem is, or weighing whether something is worth doing, even if they never say concept or flow. Offer it before anything is built. Also on "I'm wondering whether", «jeg lurer på om», "something feels off about", «noe skurrer», "run the concept flow", «kjør konseptflyten».
 ---
 
 # Concept Flow

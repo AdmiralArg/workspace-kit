@@ -1,7 +1,7 @@
 ---
 name: riff
 description: >
-  Quick, generative concept-shaping for early ideas. Use when the user brings a loose idea without asking for anything specific, and offer a riff before anything is built. Also when the user says "riff with me", «riff med meg», "I have a loose idea", «jeg har en løs ide», "shape this idea", or wants to think out loud before committing to a design brief.
+  Shapes a loose idea for something to build (a feature, a screen, a product) before a design brief. Use when the user brings such an idea without asking for anything specific, and offer a riff before anything is built. Also on "riff with me", «riff med meg», "I have an idea for a feature", «jeg har en ide til en funksjon», "shape this idea". A problem that is not yet understood belongs to concept-flow instead.
 ---
 
 # Riff

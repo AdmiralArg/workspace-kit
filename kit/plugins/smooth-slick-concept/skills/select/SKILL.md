@@ -1,7 +1,7 @@
 ---
 name: select
 description: >
-  Evaluates solution directions against the problem frame and converges on a recommendation through focused challenge. Use when the user says "select a direction", «velg retning», "which one should we go with", «hvilken skal vi gå for», "help me choose", or wants to go from several concepts to one recommended direction. Part of the Smooth Slick Concept flow (Diamond 2, converge).
+  Weighs solution directions against the problem frame and converges on one recommendation. Use when the user has several options and is torn between them. Also on "select a direction", «velg retning», "which one should we go with", «hvilken skal vi gå for», "help me choose". Last step of concept-flow.
 ---
 
 # Select

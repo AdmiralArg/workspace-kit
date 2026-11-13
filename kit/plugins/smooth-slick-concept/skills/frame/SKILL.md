@@ -1,7 +1,7 @@
 ---
 name: frame
 description: >
-  Converges a broad problem landscape into one sharp problem statement through focused challenge. Use when the user says "frame the problem", «ram inn problemet», "what are we actually solving", «hva er det vi egentlig løser», or wants to go from a wide exploration to a single problem worth solving. Part of the Smooth Slick Concept flow (Diamond 1, converge).
+  Narrows a broad or muddled problem to one sharp problem statement, through focused challenge. Use when the user has looked around but cannot yet say what they are actually solving. Also on "frame the problem", «ram inn problemet», "what are we actually solving", «hva er det vi egentlig løser». Second step of concept-flow.
 ---
 
 # Frame
