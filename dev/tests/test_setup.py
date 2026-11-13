@@ -492,6 +492,74 @@ class IndexTest(Base):
         self.assertFalse((self.ws / self.INDEX).exists())
 
 
+class UserSkillsTest(Base):
+    def setUp(self):
+        super().setUp()
+        self.home = Path(self.tmp.name) / "home"
+        self.home.mkdir()
+        os.environ["WORKSPACE_KIT_HOME"] = str(self.home)
+        self.skills_dir = self.home / ".agents" / "skills"
+
+    def run_skills(self, *argv: str) -> tuple[int, str]:
+        out = io.StringIO()
+        with redirect_stdout(out), redirect_stderr(out):
+            code = setup.main(["skills", *argv])
+        return code, out.getvalue()
+
+    def test_installs_the_flows_updates_them_and_takes_them_out(self):
+        (self.skills_dir / "mine").mkdir(parents=True)
+        (self.skills_dir / "mine" / "SKILL.md").write_text("my own\n", encoding="utf-8")
+        (self.skills_dir / "riff").mkdir()
+        (self.skills_dir / "riff" / "SKILL.md").write_text("someone else's riff\n", encoding="utf-8")
+
+        code, text = self.run_skills()
+        self.assertEqual(code, 0, text)
+        names = sorted(p.name for p in self.skills_dir.iterdir())
+        self.assertEqual(len(names), SKILLS - 1 + 1, names)  # 13 from the flows, plus mine; riff was already there
+        self.assertNotIn("workspace-lint", names)
+        self.assertIn("concept-flow", names)
+        self.assertEqual((self.skills_dir / "riff" / "SKILL.md").read_text(encoding="utf-8"), "someone else's riff\n")
+        self.assertIn("not written by the kit", text)
+
+        before = snapshot(self.home)
+        code, text = self.run_skills()
+        self.assertIn("Nothing changed", text)
+        self.assertEqual(snapshot(self.home), before)
+
+        edited = self.skills_dir / "explore" / "SKILL.md"
+        edited.write_text(edited.read_text(encoding="utf-8") + "\nMine.\n", encoding="utf-8")
+        untouched = "frame"
+        real = setup.plugin_skill_sources
+
+        def newer_kit():
+            sources = real()
+            sources[f".agents/skills/{untouched}/SKILL.md"] += b"\nNewer.\n"
+            sources[".agents/skills/explore/SKILL.md"] += b"\nNewer.\n"
+            del sources[".agents/skills/select/SKILL.md"]
+            return sources
+
+        setup.plugin_skill_sources = newer_kit
+        try:
+            code, text = self.run_skills()
+        finally:
+            setup.plugin_skill_sources = real
+        self.assertEqual(code, 0, text)
+        self.assertIn("Newer.", (self.skills_dir / untouched / "SKILL.md").read_text(encoding="utf-8"))
+        self.assertNotIn("Newer.", edited.read_text(encoding="utf-8"))
+        self.assertFalse((self.skills_dir / "select").exists())
+
+        code, text = self.run_skills("--remove")
+        self.assertEqual(code, 0, text)
+        self.assertEqual(sorted(p.name for p in self.skills_dir.iterdir()), ["explore", "mine", "riff"])
+        self.assertFalse((self.home / ".agents" / ".workspace-kit.json").exists())
+
+    def test_dry_run_writes_nothing(self):
+        code, text = self.run_skills("--dry-run")
+        self.assertEqual(code, 0, text)
+        self.assertIn("concept-flow", text)
+        self.assertEqual(snapshot(self.home), {})
+
+
 class CheckAndRemoveTest(Base):
     def test_check_passes_after_install_and_proves_the_hooks_block(self):
         self.assertEqual(self.run_setup("check")[0], 1, "not installed yet")

@@ -2,6 +2,16 @@
 
 A Double Diamond concept flow for Claude Cowork. Four phases that take you from a vague situation to a clear, defensible concept recommendation.
 
+## Install
+
+In Claude Code:
+
+```
+/plugin install smooth-slick-concept --marketplace AdmiralArg/workspace-kit
+```
+
+For Codex and OpenCode, run `python3 setup.py skills` from the workspace-kit folder. It puts the skills in `~/.agents/skills`. A workspace set up with the kit has them already.
+
 ## Skills
 
 | Skill | Phase | What it does |

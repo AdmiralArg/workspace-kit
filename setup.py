@@ -4,6 +4,7 @@
   python setup.py install [--workspace PATH] [--dry-run] [options]
   python setup.py check   [--workspace PATH]
   python setup.py remove  [--workspace PATH] [--dry-run]
+  python setup.py skills  [--remove] [--dry-run]
 
 install  Wires the kit into the folder: settings file, rules, log, glossary,
          inbox, index, hooks and skills, for Claude Code, Codex and OpenCode. Safe in
@@ -13,6 +14,10 @@ install  Wires the kit into the folder: settings file, rules, log, glossary,
 check    Confirms that everything is in place and that the hooks really run.
 remove   Takes out what install put in. Files you edited, and your own content
          (workspace.yaml, the log, the glossary, the inbox), are left alone.
+skills   Puts the concept and design skills in ~/.agents/skills, where Codex and
+         OpenCode find them in every folder. Run it again to update, with
+         --remove to take them out. Claude Code gets them as plugins instead:
+         see the README.
 
 Options for the first install, ignored once workspace.yaml exists:
   --client NAME                 who the work is for. Default: the folder name
@@ -55,7 +60,7 @@ import build_index  # noqa: E402
 import kitlib  # noqa: E402
 
 KIT = "workspace-kit"
-VERSION = "0.4.2"
+VERSION = "0.5.0"
 KIT_DIR = ".workspace-kit"
 MANIFEST = f"{KIT_DIR}/manifest.json"
 BLOCK_START = "<!-- workspace-kit:start -->"
@@ -614,13 +619,16 @@ def start_repository(workspace: Path, paths: list[str], personal: dict) -> list[
 # ---------------------------------------------------------------- manifest
 
 def read_manifest(workspace: Path) -> dict:
-    path = workspace / MANIFEST
+    return read_manifest_at(workspace / MANIFEST)
+
+
+def read_manifest_at(path: Path) -> dict:
     if not path.exists():
         return {}
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except ValueError as exc:
-        raise Problem(f"{MANIFEST} cannot be read: {exc}")
+        raise Problem(f"{path} cannot be read: {exc}")
     return data if isinstance(data, dict) else {}
 
 
@@ -1127,6 +1135,81 @@ def check(workspace: Path, args) -> int:
     return 1 if failed else 0
 
 
+# ---------------------------------------------------------------- skills for every folder
+
+USER_SKILLS = ".agents/skills"
+USER_MANIFEST = ".agents/.workspace-kit.json"
+
+
+def user_home() -> Path:
+    return Path(os.environ.get("WORKSPACE_KIT_HOME") or Path.home())
+
+
+def plugin_skill_sources() -> dict[str, bytes]:
+    """The skills of the two flows, by path under the home folder. workspace-lint needs a workspace, so it stays out."""
+    return {f"{USER_SKILLS}/{f.parent.name}/SKILL.md": unix(f.read_bytes())
+            for f in sorted((SOURCE / "plugins").glob("*/skills/*/SKILL.md"))}
+
+
+def user_skills(args) -> int:
+    home = user_home()
+    report = Report()
+    out = Writer(home, args.dry_run)
+    manifest = read_manifest_at(home / USER_MANIFEST)
+    recorded = dict(manifest.get("files", {}))
+    sources = {} if args.remove else plugin_skill_sources()
+    files: dict[str, str] = {}
+    for rel, data in sources.items():
+        target = home / rel
+        if not target.exists():
+            out.write(rel, data)
+            files[rel] = sha(data)
+            report.add("created", rel)
+            continue
+        current = unix(target.read_bytes())
+        if current == data:
+            files[rel] = sha(data)
+            report.add("unchanged", rel)
+        elif rel in recorded and sha(current) == recorded[rel]:
+            out.write(rel, data)
+            files[rel] = sha(data)
+            report.add("updated", rel)
+        elif rel in recorded:
+            files[rel] = recorded[rel]
+            report.add("kept", rel)
+        else:
+            report.add("conflict", rel)
+    for rel in sorted(set(recorded) - set(sources)):
+        target = home / rel
+        if target.exists() and sha(unix(target.read_bytes())) == recorded[rel]:
+            out.delete(rel)
+            report.add("removed", rel)
+        elif target.exists():
+            report.add("kept", rel, "no longer wanted")
+    if files:
+        new_manifest = {"kit": KIT, "version": VERSION, "files": dict(sorted(files.items()))}
+        if new_manifest != manifest:
+            out.write(USER_MANIFEST, dump_json(new_manifest))
+    elif manifest:
+        out.delete(USER_MANIFEST)
+
+    report.show(args.verbose or args.remove)
+    print()
+    where = home / USER_SKILLS
+    if args.dry_run:
+        print("Dry run: nothing was written. Run again without --dry-run to do the above.")
+    elif args.remove:
+        print(f"The kit's skills are taken out of {where}. Skills you edited were left.")
+    elif report.changed():
+        print(f"{len(files)} skills from {KIT} {VERSION} are in {where}, for Codex and OpenCode in every folder. "
+              "Start a new session to load them.")
+    else:
+        print(f"The skills in {where} are already those of {KIT} {VERSION}. Nothing changed.")
+    if report.count("conflict"):
+        print(f"{report.count('conflict')} skill(s) with the same name were already there and were not touched.")
+    return 0
+
+
 # ---------------------------------------------------------------- command line
 
 def main(argv: list[str] | None = None) -> int:
@@ -1136,10 +1219,11 @@ def main(argv: list[str] | None = None) -> int:
         except (AttributeError, ValueError):
             pass
     parser = argparse.ArgumentParser(description=f"Set up {KIT} {VERSION} in a project folder.")
-    parser.add_argument("command", nargs="?", default="install", choices=["install", "check", "remove"])
+    parser.add_argument("command", nargs="?", default="install", choices=["install", "check", "remove", "skills"])
     parser.add_argument("--workspace", default=".", help="the project folder. Default: the current folder")
     parser.add_argument("--dry-run", action="store_true", help="show what would happen, write nothing")
     parser.add_argument("--verbose", action="store_true", help="also list what was already in place")
+    parser.add_argument("--remove", action="store_true", help="with skills: take the kit's skills out again")
     parser.add_argument("--client")
     parser.add_argument("--work-folder")
     parser.add_argument("--agents", help="claude, codex, opencode. Default: all three")
@@ -1152,6 +1236,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--ban-in")
     args = parser.parse_args(argv)
 
+    if args.command == "skills":
+        try:
+            return user_skills(args)
+        except Problem as exc:
+            print(f"Stopped, nothing was changed: {exc}", file=sys.stderr)
+            return 2
     workspace = Path(args.workspace).expanduser().resolve()
     try:
         if not workspace.is_dir():

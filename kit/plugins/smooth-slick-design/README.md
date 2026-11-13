@@ -2,6 +2,16 @@
 
 A design-tool-focused workflow for Claude Cowork. Seven skills plus an orchestrator that take you from a loose idea to a reviewed design, with structured artifacts at every step. Mockup-first, system and technology agnostic, code generation only when explicitly requested.
 
+## Install
+
+In Claude Code:
+
+```
+/plugin install smooth-slick-design --marketplace AdmiralArg/workspace-kit
+```
+
+For Codex and OpenCode, run `python3 setup.py skills` from the workspace-kit folder. It puts the skills in `~/.agents/skills`. A workspace set up with the kit has them already.
+
 ## Skills
 
 | Skill | What it does |

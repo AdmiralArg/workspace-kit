@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "workspace-kit",
+  "description": "The concept and design flows from workspace-kit, for use in any folder.",
+  "owner": {
+    "name": "Aslak Sødal"
+  },
+  "plugins": [
+    {
+      "name": "smooth-slick-concept",
+      "description": "A Double Diamond concept flow: explore, frame, ideate, select. For when a problem is still unclear.",
+      "source": "./kit/plugins/smooth-slick-concept",
+      "category": "productivity"
+    },
+    {
+      "name": "smooth-slick-design",
+      "description": "A design workflow from loose idea to review: riff, grill-me, brief, information architecture, tokens, tasks and review.",
+      "source": "./kit/plugins/smooth-slick-design",
+      "category": "productivity"
+    }
+  ]
+}

@@ -185,6 +185,36 @@ for p in ~/work/alpha ~/work/beta; do python3 setup.py install --workspace "$p";
 
 **From 0.3 to 0.4.** The update adds the index builder, a template for new documents, the "Finding things" rules and the index itself. Documents written before have no header yet, so the index takes each one's description from its first line of text. Say "lint the workspace" to have the agent propose the missing headers.
 
+## The flows in every folder
+
+The concept and design flows are useful outside a workspace too. They can be installed once for your user, so every agent has them in every folder. Nothing is uploaded anywhere: they come from this repository and live on your machine.
+
+**Claude Code** gets them as two plugins, from this repository as a plugin marketplace:
+
+```bash
+claude plugin marketplace add AdmiralArg/workspace-kit
+```
+
+```bash
+claude plugin install smooth-slick-concept@workspace-kit
+```
+
+```bash
+claude plugin install smooth-slick-design@workspace-kit
+```
+
+Their skills are then named `smooth-slick-concept:concept-flow` and so on. To update, run `claude plugin marketplace update workspace-kit`, then `claude plugin update smooth-slick-concept@workspace-kit` and the same for design.
+
+**Codex and OpenCode** both read `~/.agents/skills`. From inside the kit folder:
+
+```bash
+python3 setup.py skills
+```
+
+That puts the 13 skills of the two flows there. Run it again after pulling a newer kit to update them: skills you have not edited follow the kit, skills you edited are kept, and a skill of the same name that the kit did not write is left alone. `python3 setup.py skills --remove` takes them out. `workspace-lint` is not among them, since it needs a workspace.
+
+If a copy of the plugins was uploaded to claude.ai earlier, Claude Code also loads that copy, as `smooth-slick-concept@synced`. Turn it off so the two do not compete: `claude plugin disable smooth-slick-concept@synced`, and the same for design.
+
 ## Check and remove
 
 - **Check.** `python3 setup.py check --workspace PATH`. It feeds each hook a sample that must be blocked and one that must pass, in every form an agent uses.
