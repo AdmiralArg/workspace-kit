@@ -33,7 +33,7 @@
 
 ## Terms
 
-- **[Term]**: [definition as used in this project]
+- **[Term]**: [definition as used in this project]. Also called: [other names, in every language used].
 
 ## Open questions
 

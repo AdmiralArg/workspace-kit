@@ -97,7 +97,8 @@ class FreshFolderTest(Base):
                     "Inbox/README.md", ".workspace-kit/manifest.json",
                     ".workspace-kit/hooks/run.sh", ".workspace-kit/hooks/run.cmd", ".workspace-kit/hooks/kitlib.py",
                     ".workspace-kit/hooks/banned_characters.py", ".workspace-kit/hooks/lint_nudge.py",
-                    ".workspace-kit/templates/project/context.md",
+                    ".workspace-kit/hooks/build_index.py",
+                    ".workspace-kit/templates/project/context.md", ".workspace-kit/templates/document.md",
                     ".claude/settings.json", ".claude/skills/workspace-lint/SKILL.md", ".claude/skills/riff/SKILL.md",
                     ".codex/hooks.json", ".agents/skills/workspace-lint/SKILL.md", ".agents/skills/grill-me/SKILL.md",
                     ".opencode/plugins/workspace-kit.js"):
@@ -413,6 +414,82 @@ class UpdateTest(Base):
         if setup.find_shell():
             code, text = self.run_setup("check")
             self.assertEqual(code, 0, text)
+
+
+class IndexTest(Base):
+    INDEX = "projects/index.md"
+
+    def test_install_builds_the_index_and_rebuilds_it_when_documents_change(self):
+        code, text = self.run_setup("install")
+        self.assertEqual(code, 0, text)
+        index = self.read(self.INDEX)
+        self.assertTrue(index.startswith("# Index\n"))
+        self.assertIn("`projects/context.md`", index)
+        self.assertNotIn("- `projects/log.md`:", index)
+
+        (self.ws / "projects" / "alpha").mkdir()
+        (self.ws / "projects" / "alpha" / "plan.md").write_text(
+            "---\ndescription: The plan for alpha\ndate: 2026-11-13\nstatus: current\n---\n\n# Plan\n", encoding="utf-8")
+        if setup.find_shell():
+            code, text = self.run_setup("check")
+            self.assertEqual(code, 0, text)
+            self.assertIn("note  projects/index.md no longer matches the documents", text)
+        code, text = self.run_setup("install")
+        self.assertEqual(code, 0, text)
+        self.assertIn("- `projects/alpha/plan.md`: The plan for alpha [2026-11-13]\n", self.read(self.INDEX))
+
+    def test_a_workspace_from_an_older_kit_gets_the_index_on_update(self):
+        self.run_setup("install")
+        (self.ws / "projects" / "beta").mkdir()
+        (self.ws / "projects" / "beta" / "notes.md").write_text("# Notes\n\nWhat we found.\n", encoding="utf-8")
+        # Make it look like 0.3.2: no index, no index builder, no document template, an older manifest.
+        manifest = self.json(".workspace-kit/manifest.json")
+        for rel in (".workspace-kit/hooks/build_index.py", ".workspace-kit/templates/document.md"):
+            (self.ws / rel).unlink()
+            del manifest["files"][rel]
+        (self.ws / self.INDEX).unlink()
+        manifest["version"] = "0.3.2"
+        (self.ws / ".workspace-kit" / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+        agents = self.ws / "AGENTS.md"
+        agents.write_text(agents.read_text(encoding="utf-8").replace("### Finding things", "### Old heading"),
+                          encoding="utf-8")
+        if setup.find_shell():
+            code, text = self.run_setup("check")
+            self.assertEqual(code, 1)
+            self.assertIn("FAIL  kit version: installed 0.3.2", text)
+            self.assertIn("FAIL  projects/index.md: it is missing", text)
+
+        code, text = self.run_setup("install")
+        self.assertEqual(code, 0, text)
+        for rel in (".workspace-kit/hooks/build_index.py", ".workspace-kit/templates/document.md", self.INDEX):
+            self.assertTrue((self.ws / rel).is_file(), rel)
+        self.assertIn("- `projects/beta/notes.md`: What we found.\n", self.read(self.INDEX))
+        self.assertIn("### Finding things", self.read("AGENTS.md"))
+        self.assertEqual(self.json(".workspace-kit/manifest.json")["version"], setup.VERSION)
+        if setup.find_shell():
+            code, text = self.run_setup("check")
+            self.assertEqual(code, 0, text)
+
+    def test_an_index_you_wrote_is_never_touched(self):
+        (self.ws / "projects").mkdir()
+        (self.ws / "projects" / "index.md").write_text("# My own index\n", encoding="utf-8")
+        code, text = self.run_setup("install")
+        self.assertEqual(code, 0, text)
+        self.assertEqual(self.read(self.INDEX), "# My own index\n")
+        self.assertIn("not written by the kit", text)
+        if setup.find_shell():
+            code, text = self.run_setup("check")
+            self.assertEqual(code, 0, text)
+            self.assertIn("note  projects/index.md was not built by the kit", text)
+        self.run_setup("remove")
+        self.assertEqual(self.read(self.INDEX), "# My own index\n")
+
+    def test_remove_takes_out_the_index_the_kit_built(self):
+        self.run_setup("install")
+        self.assertTrue((self.ws / self.INDEX).is_file())
+        code, text = self.run_setup("remove")
+        self.assertEqual(code, 0, text)
+        self.assertFalse((self.ws / self.INDEX).exists())
 
 
 class CheckAndRemoveTest(Base):

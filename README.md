@@ -9,6 +9,7 @@ A working method for doing documentation, design and product work with an AI age
 | Rules | One marked section in `AGENTS.md`, the file every agent reads. `CLAUDE.md` imports it |
 | Settings | `workspace.yaml`: who the work is for, where it lives, languages, banned characters, which agents |
 | Work folder | One subfolder per project, each with a README, a glossary of terms and a decision log |
+| Index | One line per document, built by a script from the documents themselves. It is where an agent starts when it looks for something |
 | Log | One line per piece of work, naming the agent that did it, in a format a script can read |
 | Git | A repository, so each piece of work is a commit with its log line as the message |
 | Inbox | A drop zone for unsorted material, with a fixed way of taking it in |
@@ -70,12 +71,12 @@ Five things you can see, and five hidden folders.
 | `workspace.yaml` | The settings |
 | `AGENTS.md` | The rules, with one section between two marker lines that belongs to the kit |
 | `CLAUDE.md` | Two lines that send Claude Code to `AGENTS.md` |
-| `projects/` | Where the work lives, with `log.md` and `context.md`. An existing `projects/` or `design/` is used as it is |
+| `projects/` | Where the work lives, with `log.md`, `context.md` and `index.md`. An existing `projects/` or `design/` is used as it is |
 | `Inbox/` | The drop zone |
 
 | Hidden | What it holds |
 |---|---|
-| `.workspace-kit/` | The hook scripts, the project templates, and the record of what was installed |
+| `.workspace-kit/` | The hook scripts, the index builder, the templates, and the record of what was installed |
 | `.claude/` | Claude Code's copy of the skills, and its hooks |
 | `.agents/` | The skills, where Codex and OpenCode look |
 | `.codex/` | Codex's hooks |
@@ -121,14 +122,16 @@ Setup asks whether you want the folder under git. If you say yes and there is no
 
 - **Starting something unclear.** The agent offers `concept-flow` when the problem is unclear, `riff` when there is a loose idea, and `grill-me` when a direction is chosen but untested. It offers once and takes no for an answer.
 - **A new project.** A folder under the work folder with `README.md`, `context.md` and `decisions.md`, started from `.workspace-kit/templates/project/`.
+- **Finding something.** The agent reads `projects/index.md`, narrows to the project and the document, and searches the files for the word and its other names from the glossary. It names the file an answer rests on. There is no search engine and nothing to keep running: the index is a text file, rebuilt with `sh .workspace-kit/hooks/run.sh .workspace-kit/hooks/build_index.py`.
+- **A new document.** Three lines at the top say what question it answers, when it was last true, and whether it is current, a snapshot or superseded. The index is built from them.
 - **New material.** Drop it in `Inbox/`. The next session reads it, files it where it belongs and logs it.
-- **Keeping it honest.** Say "lint the workspace". The lint finds contradictions, undefined terms, stale claims and broken file references, and proposes fixes. A reminder shows when the last pass is too old.
+- **Keeping it honest.** Say "lint the workspace". The lint finds contradictions, undefined terms, stale claims, a stale index, documents with no description, documents too large to read whole and broken file references, and proposes fixes. A reminder shows when the last pass is too old.
 
 ## Update, check, remove
 
-- **Update.** Get the newer kit and run `install` again. Files you have not edited follow the kit. Files you edited are kept as you left them.
+- **Update.** Get the newer kit and run `install` again. Files you have not edited follow the kit. Files you edited are kept as you left them. The index is rebuilt on every run, except an `index.md` you wrote yourself, which is left alone. `check` says when the installed kit is older than the one you run it from.
 - **Check.** `python3 setup.py check --workspace PATH`. It feeds each hook a sample that must be blocked and one that must pass, in every form an agent uses.
-- **Remove.** `python3 setup.py remove --workspace PATH`. It takes out what it put in. Your settings, log, glossary, inbox and git history stay.
+- **Remove.** `python3 setup.py remove --workspace PATH`. It takes out what it put in, the index included. Your settings, log, glossary, inbox and git history stay.
 
 ## What it needs
 
@@ -139,7 +142,7 @@ Setup asks whether you want the folder under git. If you say yes and there is no
 
 ## What it does not do yet
 
-No command that turns your corrections into rules, no shared layer for other people's agents, no script-only lint. The plan and the research behind it are in `dev/docs/`.
+No command that turns your corrections into rules, no shared layer for other people's agents, and only the first part of a script-only lint (the index check). No search by meaning: finding things is the index plus a text search, which holds up to some hundreds of documents. The plan and the research behind it are in `dev/docs/`.
 
 ## In this repository
 

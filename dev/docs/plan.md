@@ -6,7 +6,7 @@ The principle from the research: writing things down is cheap, what the agent re
 
 ## Built
 
-- **Installer.** `setup.py` with install, check and remove. Additive, repeatable, and safe in an existing project. It records what it installed, so an update never overwrites a file the user edited.
+- **Installer.** `setup.py` with install, check and remove. Additive, repeatable, and safe in an existing project. It records what it installed, so an update never overwrites a file the user edited. Every install rebuilds the index, so an update from an older kit leaves a workspace with one.
 - **Three agents, one folder.** Claude Code, Codex and OpenCode are wired by the same install, each in its own way, and can work in the same folder. `agents` in `workspace.yaml` decides which.
 - **One source of rules.** A marked section in `AGENTS.md`, rendered from `workspace.yaml`. `CLAUDE.md` imports it, with a fallback line in case the import is not loaded.
 - **Settings.** `workspace.yaml`, read by the rules, the hooks and the skills. Every key has a reader. Personal defaults in `~/.workspace-kit.yaml`.
@@ -17,6 +17,7 @@ The principle from the research: writing things down is cheap, what the agent re
 - **A check at every commit.** A pre-commit hook stops a commit that adds a banned character or bytes that are not valid text. It is the one check every path goes through: an agent's file tool, a shell command, or a person. It came from a live run where Codex on Windows wrote through the shell, which the file hook cannot see.
 - **Plain characters in what agents copy.** Templates that an agent reproduces, such as the decision format, use plain English characters only. This is a precaution, not a fix for something seen.
 - **Lint reminder.** At session start, from the log.
+- **The read side.** A section in the rules on how to find things: index, then project, then document, then a text search with the glossary's other names. A header on every document (`description`, `date`, `status`). An index built by `build_index.py` from those headers, with a `--check` that the lint runs: stale index, missing descriptions, documents too large to read whole. The log is searched, never read whole. No embeddings and no packages: the corpus is small enough that an index and a text search do better than a retriever that has to be kept in step.
 - **Checks on the kit itself.** Tests for the installer, the hooks and the settings reader. A build that refuses skills which would fail silently. A leak check for client names.
 
 ## Verified, and how
@@ -33,6 +34,7 @@ The principle from the research: writing things down is cheap, what the agent re
 | Both launchers pass input, output and exit code through | Tests, in `sh` and in the Windows shell, with a space in the folder name |
 | Three harnesses doing real work in one folder | OpenCode started a project, Codex recorded a decision, Claude Code wrote a note. Each followed the rules and named itself in the log |
 | The commit check stops a real commit | Tests with real git commits, and live in the test folder |
+| An update from 0.3.2 brings the read side into a workspace that already has the kit | A folder set up with 0.3.2 under git, then updated with 0.4.0 on macOS: the index builder, the document template, the new rules and the index arrived, `check` passed, a commit went through the commit check, a second run changed nothing, and `remove` took the index out |
 
 ## Found by running it for real
 
@@ -44,14 +46,15 @@ The principle from the research: writing things down is cheap, what the agent re
 
 ## Not verified
 
+- **The read side, in a live session.** The tests pass and an update was run for real, but no agent has yet been watched using the index to find something.
 - **Codex running the hooks live.** Codex runs a project's hooks only after the user has approved them in `/hooks`. The hooks follow Codex's documented protocol and pass every test, but no live Codex session has run them.
 - **The reply check, live.** It is tested against the documented input and never blocks twice in a row.
 - **The `CLAUDE.md` import in every Claude surface.** The fallback line covers the case where it does not load.
-- **Anything on macOS or Linux.** All live checks were on Windows. The code paths for other systems are the simpler ones.
+- **Agents on macOS or Linux.** The live agent checks were on Windows. The test suite and the 0.3.2 update have run on macOS. The code paths for other systems are the simpler ones.
 
 ## Next, in order
 
-1. **A script-only lint.** Dead links, orphans, missing or old dates, stale index, retired terms, and whether numbers and quotes exist in the source a page cites. Weekly, no model. The model pass stays for contradictions.
+1. **The rest of a script-only lint.** The stale index, missing descriptions and oversized documents are done, in `build_index.py --check`. Left: dead links, orphans, missing or old dates, retired terms, and whether numbers and quotes exist in the source a page cites. Weekly, no model. The model pass stays for contradictions.
 2. **A retro command.** Corrections go in a queue. Each is shown in a table to approve, edit or skip, and sorted into the cheapest form that holds: hook or lint check, rule, skill, glossary term, decision, or discard. A rule is promoted the second time the mistake happens, and carries the date, the correction it came from, and a condition for when to remove it. Nothing writes rules without approval.
 3. **A shared layer.** Optional. Generated from the private layer by one promote step that fails if a page depends on private files. It opens as its own folder, with its own `AGENTS.md`, an index, a statement of what an outside agent may do alone, and who wrote and last reviewed each page. A handover is an export of this layer.
 4. **A doctor command.** `setup.py check` already proves the install. The doctor adds what only a session can see: never-used skills as candidates for deletion, and rules that no longer earn their place.

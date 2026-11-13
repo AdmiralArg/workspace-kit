@@ -6,7 +6,7 @@
   python setup.py remove  [--workspace PATH] [--dry-run]
 
 install  Wires the kit into the folder: settings file, rules, log, glossary,
-         inbox, hooks and skills, for Claude Code, Codex and OpenCode. Safe in
+         inbox, index, hooks and skills, for Claude Code, Codex and OpenCode. Safe in
          an existing project: it adds, it never overwrites what it did not
          write, and running it again changes nothing. Run it again after
          editing workspace.yaml or after getting a newer kit.
@@ -51,10 +51,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 SOURCE = ROOT / "kit"
 sys.path.insert(0, str(SOURCE / "hooks"))
+import build_index  # noqa: E402
 import kitlib  # noqa: E402
 
 KIT = "workspace-kit"
-VERSION = "0.3.2"
+VERSION = "0.4.0"
 KIT_DIR = ".workspace-kit"
 MANIFEST = f"{KIT_DIR}/manifest.json"
 BLOCK_START = "<!-- workspace-kit:start -->"
@@ -206,6 +207,7 @@ def managed_sources(settings: dict) -> dict[str, bytes]:
             out[f"{KIT_DIR}/hooks/{f.name}"] = unix(f.read_bytes())
     for f in sorted((SOURCE / "template" / "project").glob("*.md")):
         out[f"{KIT_DIR}/templates/project/{f.name}"] = unix(f.read_bytes())
+    out[f"{KIT_DIR}/templates/document.md"] = unix((SOURCE / "template" / "document.md").read_bytes())
     for name, data in skill_sources().items():
         for folder in skill_folders(settings["agents"]):
             out[f"{folder}/{name}/SKILL.md"] = data
@@ -629,6 +631,24 @@ def load_workspace_settings(workspace: Path) -> dict:
         raise Problem(f"workspace.yaml: {exc}")
 
 
+def index_state(workspace: Path, settings: dict) -> tuple[str, str, str]:
+    """The index of the work folder: its path, what it should say, and how it stands.
+
+    The state is "missing", "current", "stale", or "theirs" for an index.md the
+    kit did not build, which is never touched.
+    """
+    rel = f"{settings['work_folder']}/{build_index.INDEX_NAME}"
+    here = {**settings, "root": str(workspace)}
+    text = build_index.render(here, build_index.collect(here))
+    path = workspace / rel
+    if not path.is_file():
+        return rel, text, "missing"
+    current = path.read_text(encoding="utf-8", errors="replace").replace("\r\n", "\n")
+    if not build_index.is_ours(current):
+        return rel, text, "theirs"
+    return rel, text, "current" if current == text else "stale"
+
+
 # ---------------------------------------------------------------- install
 
 def install(workspace: Path, args) -> int:
@@ -738,6 +758,17 @@ def install(workspace: Path, args) -> int:
         elif target.exists():
             report.add("kept", rel, "no longer wanted")
 
+    # 2b. The index of the work folder. It is built from the documents and never
+    #     edited by hand, so every run rebuilds it. One the kit did not build is left.
+    index_rel, index_text, index_now = index_state(workspace, settings)
+    if index_now == "theirs":
+        report.add("conflict", index_rel)
+    elif index_now == "current":
+        report.add("unchanged", index_rel)
+    else:
+        out.write(index_rel, index_text.encode("utf-8"))
+        report.add("created" if index_now == "missing" else "updated", index_rel, "built from the documents")
+
     # 3. The rules: one marked section in AGENTS.md, and CLAUDE.md pointing at it.
     for rel, old, new, crlf in (("AGENTS.md", agents_old, agents_new, agents_crlf),
                                 ("CLAUDE.md", claude_old, claude_new, claude_crlf)):
@@ -798,6 +829,8 @@ def install(workspace: Path, args) -> int:
                 # Files that were in the folder before are the owner's to commit.
                 ours = {*files, *seeds, "AGENTS.md", "CLAUDE.md", CLAUDE_SETTINGS, CODEX_HOOKS,
                         kitlib.CONFIG_NAME, MANIFEST}
+                if index_now != "theirs":
+                    ours.add(index_rel)
                 notes += start_repository(workspace, sorted(ours), personal_defaults())
             if looks_synced(workspace):
                 notes.append("This folder looks like it is synced between devices. Git works here, "
@@ -884,6 +917,14 @@ def remove(workspace: Path, args) -> int:
         else:
             out.write(rel, dump_json(cleaned))
             report.add("updated", rel, "the kit's hooks are taken out")
+
+    try:
+        index_rel, _, index_now = index_state(workspace, load_workspace_settings(workspace))
+    except Problem:
+        index_now = "theirs"
+    if index_now in ("current", "stale"):
+        out.delete(index_rel)
+        report.add("removed", index_rel, "it is built by the kit, and can be built again")
 
     if git_state(workspace) == "here":
         happened, _ = sync_commit_hook(workspace, False, args.dry_run)
@@ -980,6 +1021,14 @@ def check(workspace: Path, args) -> int:
         add(not unwired, "files match workspace.yaml",
             "" if not unwired else "not installed: " + ", ".join(unwired[:3]) + ". Run install")
         add((workspace / settings["work_folder"] / "log.md").is_file(), f"{settings['work_folder']}/log.md")
+        index_rel, _, index_now = index_state(workspace, settings)
+        add(index_now != "missing", index_rel, "" if index_now != "missing" else "it is missing. Run install")
+        if index_now == "stale":
+            notes.append(f"{index_rel} no longer matches the documents. Rebuild it: "
+                         "sh .workspace-kit/hooks/run.sh .workspace-kit/hooks/build_index.py")
+        elif index_now == "theirs":
+            notes.append(f"{index_rel} was not built by the kit, so it is left alone and no index is built. "
+                         "Rename it, then run install.")
 
         if "claude" in agents:
             claude = workspace / "CLAUDE.md"

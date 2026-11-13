@@ -18,6 +18,7 @@ from pathlib import Path
 KIT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(KIT / "kit" / "hooks"))
 import banned_characters  # noqa: E402
+import build_index  # noqa: E402
 import kitlib  # noqa: E402
 import lint_nudge  # noqa: E402
 
@@ -300,6 +301,126 @@ class LintNudgeTest(unittest.TestCase):
             os.environ.clear()
             os.environ.update(old)
         self.assertEqual(out.getvalue(), "")
+
+
+class BuildIndexTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        (self.root / "work" / "alpha" / "notes").mkdir(parents=True)
+        (self.root / "work" / "empty").mkdir()
+        self.settings = {**settings(work_folder="work"), "root": str(self.root)}
+        self.put("context.md", "# Shared glossary\n\nTerms that apply across projects.\n")
+        self.put("log.md", "# Log\n\n## [2026-11-01] workspace | doc | set up [setup]\n")
+        self.put("alpha/README.md", "# Alpha\n\nThe billing redesign.\n\n## Documents\n\n- `context.md`: terms\n")
+        self.put("alpha/context.md", "# Alpha, context\n\n[One sentence that defines the project.]\n\n| a | b |\n|---|---|\n")
+        self.put("alpha/pricing-2026-10.md",
+                 "---\ndescription: \"What each plan costs, and why: the October snapshot\"\n"
+                 "date: 2026-10-03\nstatus: snapshot\n---\n\n# Pricing\n\nBody text.\n")
+        self.put("alpha/notes/call.md", "# Call\n\n- a list item\n\nWhat the supplier said about delivery.\n")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def put(self, rel: str, text: str) -> None:
+        (self.root / "work" / rel).write_text(text, encoding="utf-8", newline="\n")
+
+    def index(self) -> str:
+        return build_index.render(self.settings, build_index.collect(self.settings))
+
+    def test_one_line_per_document_grouped_by_project(self):
+        text = self.index()
+        self.assertIn("## Shared\n\n- `work/context.md`: Terms that apply across projects.\n", text)
+        self.assertIn("## alpha\n\n- `work/alpha/README.md`: The billing redesign.\n", text)
+        self.assertIn("- `work/alpha/notes/call.md`: What the supplier said about delivery.\n", text)
+        self.assertLess(text.index("alpha/README.md"), text.index("alpha/context.md"))
+        self.assertLess(text.index("alpha/context.md"), text.index("alpha/pricing-2026-10.md"))
+
+    def test_the_header_gives_description_status_and_date(self):
+        self.assertIn("- `work/alpha/pricing-2026-10.md`: What each plan costs, and why: the October snapshot "
+                      "[snapshot, 2026-10-03]\n", self.index())
+
+    def test_the_log_the_index_itself_and_empty_folders_are_left_out(self):
+        (self.root / "work" / "index.md").write_text("old", encoding="utf-8")
+        text = self.index()
+        self.assertNotIn("`work/log.md`:", text)
+        self.assertNotIn("`work/index.md`:", text)
+        self.assertNotIn("## empty", text)
+
+    def test_a_template_placeholder_is_not_a_description(self):
+        self.assertIn("- `work/alpha/context.md`: (no description)\n", self.index())
+
+    def test_a_long_description_is_cut_at_a_word(self):
+        self.put("alpha/long.md", "# Long\n\n" + "word " * 100 + "\n")
+        line = [l for l in self.index().splitlines() if "long.md" in l][0]
+        self.assertTrue(line.endswith("word..."), line)
+        self.assertLess(len(line), 260)
+
+    def test_a_header_that_is_never_closed_is_not_a_header(self):
+        self.put("alpha/odd.md", "---\ndescription: not closed\n\n# Odd\n\nReal first line.\n")
+        facts = build_index.describe(str(self.root / "work" / "alpha" / "odd.md"))
+        self.assertFalse(facts["from_header"])
+
+    def test_check_names_what_is_wrong_and_passes_when_nothing_is(self):
+        found = build_index.problems(self.settings, build_index.collect(self.settings))
+        self.assertIn("work/index.md: missing, build it", found)
+        self.assertIn("work/alpha/context.md: no description", found)
+        self.assertTrue(any(l.startswith("work/alpha/notes/call.md: no header") for l in found), found)
+        self.assertFalse(any("pricing" in l or "README" in l for l in found), found)
+
+        self.put("alpha/context.md", "# Alpha, context\n\nThe billing redesign, defined.\n")
+        self.put("alpha/notes/call.md", "---\ndescription: What the supplier said\ndate: 2026-11-01\n"
+                                        "status: current\n---\n\n# Call\n")
+        self.put("index.md", self.index())
+        self.assertEqual(build_index.problems(self.settings, build_index.collect(self.settings)), [])
+
+        self.put("alpha/new.md", "---\ndescription: A new page\n---\n\n# New\n")
+        self.assertEqual(build_index.problems(self.settings, build_index.collect(self.settings)),
+                         ["work/index.md: out of date, rebuild it"])
+
+    def test_check_reports_a_document_too_large_to_read_whole(self):
+        self.put("alpha/big.md", "---\ndescription: Everything\n---\n\n# Big\n\n" + "x" * (build_index.LARGE + 1))
+        found = build_index.problems(self.settings, build_index.collect(self.settings))
+        self.assertTrue(any(l.startswith("work/alpha/big.md: ") and "too large" in l for l in found), found)
+
+    def test_an_index_written_by_hand_is_left_alone(self):
+        (self.root / "workspace.yaml").write_text("work_folder: work\n", encoding="utf-8")
+        self.put("index.md", "# My own index\n")
+        old = dict(os.environ)
+        os.environ["WORKSPACE_KIT_CONFIG"] = str(self.root / "workspace.yaml")
+        try:
+            with redirect_stdout(io.TextIOWrapper(io.BytesIO(), encoding="utf-8")):
+                self.assertEqual(build_index.main([]), 1)
+        finally:
+            os.environ.clear()
+            os.environ.update(old)
+        self.assertEqual((self.root / "work" / "index.md").read_text(encoding="utf-8"), "# My own index\n")
+        found = build_index.problems(self.settings, build_index.collect(self.settings))
+        self.assertTrue(any(l.startswith("work/index.md: written by hand") for l in found), found)
+
+    def test_main_writes_the_index_once_and_then_says_it_is_up_to_date(self):
+        (self.root / "workspace.yaml").write_text("work_folder: work\n", encoding="utf-8")
+        old = dict(os.environ)
+        os.environ["WORKSPACE_KIT_CONFIG"] = str(self.root / "workspace.yaml")
+        out = io.BytesIO()
+        real = sys.stdout
+        wrapper = io.TextIOWrapper(out, encoding="utf-8")
+        try:
+            sys.stdout = wrapper
+            self.assertEqual(build_index.main([]), 0)
+            self.assertEqual(build_index.main([]), 0)
+            self.assertEqual(build_index.main(["--check"]), 1, "two documents still have no header")
+            self.assertEqual(build_index.main(["--wrong"]), 2)
+            sys.stdout.flush()
+        finally:
+            sys.stdout = real
+            os.environ.clear()
+            os.environ.update(old)
+        said = out.getvalue().decode("utf-8")
+        wrapper.detach()
+        self.assertIn("Wrote work/index.md, 5 documents.", said)
+        self.assertIn("work/index.md is up to date, 5 documents.", said)
+        self.assertEqual((self.root / "work" / "index.md").read_text(encoding="utf-8"), self.index())
 
 
 if __name__ == "__main__":
