@@ -205,7 +205,23 @@ claude plugin install smooth-slick-design@workspace-kit
 
 Their skills are then named `smooth-slick-concept:concept-flow` and so on. To update, run `claude plugin marketplace update workspace-kit`, then `claude plugin update smooth-slick-concept@workspace-kit` and the same for design.
 
-**Codex and OpenCode** both read `~/.agents/skills`. From inside the kit folder:
+**Codex** reads the same marketplace:
+
+```bash
+codex plugin marketplace add AdmiralArg/workspace-kit
+```
+
+```bash
+codex plugin add smooth-slick-concept@workspace-kit
+```
+
+```bash
+codex plugin add smooth-slick-design@workspace-kit
+```
+
+To update, run `codex plugin marketplace upgrade workspace-kit`.
+
+**OpenCode** has no plugins of this kind, so it gets the skills as files in `~/.config/opencode/skills`, a folder only OpenCode reads. From inside the kit folder:
 
 ```bash
 python3 setup.py skills
@@ -213,7 +229,7 @@ python3 setup.py skills
 
 That puts the 13 skills of the two flows there. Run it again after pulling a newer kit to update them: skills you have not edited follow the kit, skills you edited are kept, and a skill of the same name that the kit did not write is left alone. `python3 setup.py skills --remove` takes them out. `workspace-lint` is not among them, since it needs a workspace.
 
-If a copy of the plugins was uploaded to claude.ai earlier, Claude Code also loads that copy, as `smooth-slick-concept@synced`. Turn it off so the two do not compete: `claude plugin disable smooth-slick-concept@synced`, and the same for design.
+Older copies compete with these. If the plugins were uploaded to claude.ai, Claude Code also loads them as `smooth-slick-concept@synced`: turn that off with `claude plugin disable smooth-slick-concept@synced`, and the same for design. In Codex, remove a copy from another marketplace with `codex plugin remove smooth-slick-concept@<marketplace>`.
 
 ## Check and remove
 

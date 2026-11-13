@@ -10,7 +10,14 @@ In Claude Code:
 /plugin install smooth-slick-concept --marketplace AdmiralArg/workspace-kit
 ```
 
-For Codex and OpenCode, run `python3 setup.py skills` from the workspace-kit folder. It puts the skills in `~/.agents/skills`. A workspace set up with the kit has them already.
+In Codex:
+
+```
+codex plugin marketplace add AdmiralArg/workspace-kit
+codex plugin add smooth-slick-concept@workspace-kit
+```
+
+For OpenCode, run `python3 setup.py skills` from the workspace-kit folder. It puts the skills in `~/.config/opencode/skills`. A workspace set up with the kit has them already.
 
 ## Skills
 

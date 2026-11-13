@@ -498,7 +498,7 @@ class UserSkillsTest(Base):
         self.home = Path(self.tmp.name) / "home"
         self.home.mkdir()
         os.environ["WORKSPACE_KIT_HOME"] = str(self.home)
-        self.skills_dir = self.home / ".agents" / "skills"
+        self.skills_dir = self.home / ".config" / "opencode" / "skills"
 
     def run_skills(self, *argv: str) -> tuple[int, str]:
         out = io.StringIO()
@@ -533,9 +533,9 @@ class UserSkillsTest(Base):
 
         def newer_kit():
             sources = real()
-            sources[f".agents/skills/{untouched}/SKILL.md"] += b"\nNewer.\n"
-            sources[".agents/skills/explore/SKILL.md"] += b"\nNewer.\n"
-            del sources[".agents/skills/select/SKILL.md"]
+            sources[f".config/opencode/skills/{untouched}/SKILL.md"] += b"\nNewer.\n"
+            sources[".config/opencode/skills/explore/SKILL.md"] += b"\nNewer.\n"
+            del sources[".config/opencode/skills/select/SKILL.md"]
             return sources
 
         setup.plugin_skill_sources = newer_kit
@@ -551,7 +551,7 @@ class UserSkillsTest(Base):
         code, text = self.run_skills("--remove")
         self.assertEqual(code, 0, text)
         self.assertEqual(sorted(p.name for p in self.skills_dir.iterdir()), ["explore", "mine", "riff"])
-        self.assertFalse((self.home / ".agents" / ".workspace-kit.json").exists())
+        self.assertFalse((self.home / ".config" / "opencode" / "workspace-kit-skills.json").exists())
 
     def test_dry_run_writes_nothing(self):
         code, text = self.run_skills("--dry-run")

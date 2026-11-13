@@ -14,10 +14,10 @@ install  Wires the kit into the folder: settings file, rules, log, glossary,
 check    Confirms that everything is in place and that the hooks really run.
 remove   Takes out what install put in. Files you edited, and your own content
          (workspace.yaml, the log, the glossary, the inbox), are left alone.
-skills   Puts the concept and design skills in ~/.agents/skills, where Codex and
-         OpenCode find them in every folder. Run it again to update, with
-         --remove to take them out. Claude Code gets them as plugins instead:
-         see the README.
+skills   Puts the concept and design skills in ~/.config/opencode/skills, where
+         OpenCode finds them in every folder. Run it again to update, with
+         --remove to take them out. Claude Code and Codex get them as plugins
+         instead: see the README.
 
 Options for the first install, ignored once workspace.yaml exists:
   --client NAME                 who the work is for. Default: the folder name
@@ -60,7 +60,7 @@ import build_index  # noqa: E402
 import kitlib  # noqa: E402
 
 KIT = "workspace-kit"
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 KIT_DIR = ".workspace-kit"
 MANIFEST = f"{KIT_DIR}/manifest.json"
 BLOCK_START = "<!-- workspace-kit:start -->"
@@ -1137,8 +1137,8 @@ def check(workspace: Path, args) -> int:
 
 # ---------------------------------------------------------------- skills for every folder
 
-USER_SKILLS = ".agents/skills"
-USER_MANIFEST = ".agents/.workspace-kit.json"
+USER_SKILLS = ".config/opencode/skills"
+USER_MANIFEST = ".config/opencode/workspace-kit-skills.json"
 
 
 def user_home() -> Path:
@@ -1201,7 +1201,7 @@ def user_skills(args) -> int:
     elif args.remove:
         print(f"The kit's skills are taken out of {where}. Skills you edited were left.")
     elif report.changed():
-        print(f"{len(files)} skills from {KIT} {VERSION} are in {where}, for Codex and OpenCode in every folder. "
+        print(f"{len(files)} skills from {KIT} {VERSION} are in {where}, for OpenCode in every folder. "
               "Start a new session to load them.")
     else:
         print(f"The skills in {where} are already those of {KIT} {VERSION}. Nothing changed.")

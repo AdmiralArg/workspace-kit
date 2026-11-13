@@ -18,7 +18,7 @@ The principle from the research: writing things down is cheap, what the agent re
 - **Plain characters in what agents copy.** Templates that an agent reproduces, such as the decision format, use plain English characters only. This is a precaution, not a fix for something seen.
 - **Lint reminder.** At session start, from the log.
 - **The read side.** A section in the rules on how to find things: index, then project, then document, then a text search with the glossary's other names. A header on every document (`description`, `date`, `status`). An index built by `build_index.py` from those headers, with a `--check` that the lint runs: stale index, missing descriptions, documents too large to read whole. The log is searched, never read whole. No embeddings and no packages: the corpus is small enough that an index and a text search do better than a retriever that has to be kept in step.
-- **The flows in every folder.** The repository is a Claude Code plugin marketplace for the two flows, and `setup.py skills` puts them in `~/.agents/skills` for Codex and OpenCode, with the same update and remove rules as a workspace.
+- **The flows in every folder.** The repository is a Claude Code plugin marketplace for the two flows, Codex installs from the same marketplace, and `setup.py skills` puts them in `~/.config/opencode/skills` for OpenCode, with the same update and remove rules as a workspace.
 - **Checks on the kit itself.** Tests for the installer, the hooks and the settings reader. A build that refuses skills which would fail silently. A leak check for client names.
 
 ## Verified, and how
