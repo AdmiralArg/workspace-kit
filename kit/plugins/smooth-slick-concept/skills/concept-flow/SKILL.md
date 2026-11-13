@@ -1,7 +1,7 @@
 ---
 name: concept-flow
 description: >
-  Takes a vague problem to a concept recommendation: explore, frame, ideate, select. Use whenever the user is noodling on a problem, thinking out loud, unsure what the real problem is, or weighing whether something is worth doing, even if they never say concept or flow. Offer it before anything is built. Also on "I'm wondering whether", «jeg lurer på om», "something feels off about", «noe skurrer», "run the concept flow", «kjør konseptflyten».
+  Takes a vague problem to a concept recommendation: explore, frame, ideate, select. Use whenever the user opens a topic without a clear task («vi skal jobbe med», «vi må se litt på», "we need to look at"), noodles on a problem, thinks out loud, is unsure what the real problem is, or weighs whether something is worth doing, even without saying concept or flow. Offer it before building. Also «jeg lurer på om», "I'm wondering whether", «noe skurrer», "run the concept flow".
 ---
 
 # Concept Flow
